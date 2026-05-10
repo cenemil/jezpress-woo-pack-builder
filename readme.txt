@@ -5,7 +5,7 @@ Requires at least: 5.8
 Tested up to: 6.7
 Requires PHP: 7.4
 WC requires at least: 6.0
-Stable tag: 1.0.0
+Stable tag: 1.1.0
 License: Proprietary
 
 Build product packs (hampers, gift boxes, meal kits) with flexible pricing, subscription billing, and seasonal rotation.
@@ -17,11 +17,10 @@ JezPress Woo Pack Builder adds a "Pack" product type to WooCommerce. Staff build
 **Key features:**
 
 * Custom "Pack" product type — appears in all WooCommerce product contexts
-* Four product data tabs: Pack Contents, Pack Pricing, Subscription, Seasonal
-* **Pack Contents** — AJAX product search, add/remove items, set quantities
-* **Pack Pricing** — Fixed pack price OR sum of constituent product prices
+* Two product data tabs: Pack Contents, Subscription
+* **Pack Contents** — AJAX product search, add/remove items, set quantities, pricing mode, and seasonal rotation settings
 * **Subscription** — Compatible with JezPress WC Subscription and WooCommerce Subscriptions
-* **Seasonal Rotation** — Draw N products from the seasonal pool (products tagged "seasonal") on demand via "Rotate Now"
+* **Seasonal Rotation** — Draw N products from a configurable tag-based pool on demand via "Rotate Now"
 * Cart displays pack contents summary under the pack name
 * Orders record pack contents as a single line item with fulfilment detail in meta
 * WooCommerce → Packs admin page lists all packs with key stats
@@ -35,6 +34,13 @@ JezPress Woo Pack Builder adds a "Pack" product type to WooCommerce. Staff build
 4. Create packs via Products → Add New → select product type "Pack"
 
 == Changelog ==
+
+= 1.1.0 =
+* Merged Pack Pricing and Seasonal tabs into Pack Contents tab for a streamlined editing layout
+* Seasonal pool tag is now configurable in WooCommerce → Packs → Settings (defaults to "seasonal")
+* Fixed add-to-cart button not rendering on pack product pages
+* Pricing mode and seasonal rotation fields moved inline within Pack Contents panel
+* Settings card label updated to "Settings"
 
 = 1.0.0 =
 * Initial release

@@ -21,8 +21,9 @@ class JWPB_Seasonal {
 	 * @return int[]
 	 */
 	public static function get_pool() {
+		$tag   = JWPB_Settings::get( 'seasonal_tag', 'seasonal' );
 		$query = new WC_Product_Query( array(
-			'tag'          => array( 'seasonal' ),
+			'tag'          => array( $tag ),
 			'stock_status' => 'instock',
 			'status'       => 'publish',
 			'limit'        => -1,

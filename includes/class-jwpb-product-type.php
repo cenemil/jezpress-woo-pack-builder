@@ -21,8 +21,12 @@ class JWPB_Product_Type {
 		add_filter( 'woocommerce_product_class',        array( __CLASS__, 'get_pack_class' ), 10, 2 );
 		add_filter( 'woocommerce_product_data_tabs',    array( __CLASS__, 'add_product_data_tabs' ) );
 		add_action( 'woocommerce_product_data_panels',  array( __CLASS__, 'render_product_data_panels' ) );
-		add_action( 'woocommerce_process_product_meta', array( __CLASS__, 'save_meta' ) );
+		// Priority 25: runs after WooCommerce's own $product->save() (priority 10) so our
+		// _price / _regular_price writes are the final values stored for pack products.
+		add_action( 'woocommerce_process_product_meta', array( __CLASS__, 'save_meta' ), 25 );
 		add_action( 'admin_enqueue_scripts',            array( __CLASS__, 'enqueue_scripts' ) );
+		// Use the simple add-to-cart template for pack products on the single product page.
+		add_action( 'woocommerce_pack_add_to_cart',     'woocommerce_simple_add_to_cart' );
 	}
 
 	// -------------------------------------------------------------------------
@@ -43,29 +47,24 @@ class JWPB_Product_Type {
 	// -------------------------------------------------------------------------
 
 	public static function add_product_data_tabs( $tabs ) {
+		// WooCommerce's General tab has no fields relevant to pack products
+		// (price and virtual/downloadable are all show_if_simple/show_if_external).
+		// Adding hide_if_pack here lets WooCommerce's own JS hide it on type change.
+		if ( isset( $tabs['general'] ) ) {
+			$tabs['general']['class'][] = 'hide_if_pack';
+		}
+
 		$tabs['jwpb_contents'] = array(
 			'label'    => __( 'Pack Contents', 'jezpress-woo-pack-builder' ),
 			'target'   => 'jwpb_contents_data',
 			'class'    => array( 'show_if_pack' ),
 			'priority' => 11,
 		);
-		$tabs['jwpb_pricing'] = array(
-			'label'    => __( 'Pack Pricing', 'jezpress-woo-pack-builder' ),
-			'target'   => 'jwpb_pricing_data',
-			'class'    => array( 'show_if_pack' ),
-			'priority' => 12,
-		);
 		$tabs['jwpb_subscription'] = array(
 			'label'    => __( 'Subscription', 'jezpress-woo-pack-builder' ),
 			'target'   => 'jwpb_subscription_data',
 			'class'    => array( 'show_if_pack' ),
 			'priority' => 13,
-		);
-		$tabs['jwpb_seasonal'] = array(
-			'label'    => __( 'Seasonal', 'jezpress-woo-pack-builder' ),
-			'target'   => 'jwpb_seasonal_data',
-			'class'    => array( 'show_if_pack' ),
-			'priority' => 14,
 		);
 		return $tabs;
 	}
@@ -96,17 +95,108 @@ class JWPB_Product_Type {
 			<div class="options_group">
 
 				<p class="form-field">
+					<label><?php esc_html_e( 'Pricing Mode', 'jezpress-woo-pack-builder' ); ?></label>
+					<span style="display:inline-block; line-height:2;">
+						<span style="padding-right:16px;">
+							<input type="radio" name="_pack_pricing_mode" value="sum" id="_pack_pricing_mode_sum" <?php checked( $pricing_mode, 'sum' ); ?>>
+							<?php esc_html_e( 'Sum of products', 'jezpress-woo-pack-builder' ); ?>
+						</span>
+						<span>
+							<input type="radio" name="_pack_pricing_mode" value="fixed" id="_pack_pricing_mode_fixed" <?php checked( $pricing_mode, 'fixed' ); ?>>
+							<?php esc_html_e( 'Fixed price', 'jezpress-woo-pack-builder' ); ?>
+						</span>
+					</span>
+				</p>
+
+				<p class="form-field jwpb-fixed-price-field" style="<?php echo 'fixed' !== $pricing_mode ? 'display:none;' : ''; ?>">
+					<label for="_pack_price_override">
+						<?php esc_html_e( 'Pack Price', 'jezpress-woo-pack-builder' ); ?>
+						(<?php echo esc_html( get_woocommerce_currency_symbol() ); ?>)
+					</label>
+					<input type="text" id="_pack_price_override" name="_pack_price_override"
+						class="short wc_input_price"
+						value="<?php echo esc_attr( wc_format_localized_price( $price_override ) ); ?>">
+				</p>
+
+				<p class="form-field">
+					<label for="_pack_item_label"><?php esc_html_e( 'Product Column Label', 'jezpress-woo-pack-builder' ); ?></label>
+					<input type="text" id="_pack_item_label" name="_pack_item_label" class="short"
+						value="<?php echo esc_attr( (string) get_post_meta( $pack_id, '_pack_item_label', true ) ); ?>"
+						placeholder="<?php esc_attr_e( 'Product', 'jezpress-woo-pack-builder' ); ?>">
+					<span class="description"><?php esc_html_e( 'Heading for the product name column in the pack contents table. Leave blank for default.', 'jezpress-woo-pack-builder' ); ?></span>
+				</p>
+
+				<p class="form-field">
+					<label for="_pack_qty_label"><?php esc_html_e( 'Quantity Column Label', 'jezpress-woo-pack-builder' ); ?></label>
+					<input type="text" id="_pack_qty_label" name="_pack_qty_label" class="short"
+						value="<?php echo esc_attr( (string) get_post_meta( $pack_id, '_pack_qty_label', true ) ); ?>"
+						placeholder="<?php esc_attr_e( 'Quantity', 'jezpress-woo-pack-builder' ); ?>">
+					<span class="description"><?php esc_html_e( 'Heading for the quantity column in the pack contents table. Leave blank for default.', 'jezpress-woo-pack-builder' ); ?></span>
+				</p>
+
+			</div>
+
+			<div class="options_group">
+
+				<p class="form-field">
+					<label for="_pack_seasonal_enabled"><?php esc_html_e( 'Seasonal Rotation', 'jezpress-woo-pack-builder' ); ?></label>
+					<input type="checkbox" id="_pack_seasonal_enabled" name="_pack_seasonal_enabled"
+						value="yes" <?php checked( $seasonal_enabled, 'yes' ); ?>>
+				</p>
+
+				<div class="jwpb-seasonal-fields" style="<?php echo 'yes' !== $seasonal_enabled ? 'display:none;' : ''; ?>">
+					<p class="form-field jwpb-seasonal-meta">
+						<label><?php esc_html_e( 'Seasonal Pool', 'jezpress-woo-pack-builder' ); ?></label>
+						<span id="jwpb-pool-count">—</span>
+						<?php
+						printf(
+							/* translators: %s: seasonal product tag slug */
+							esc_html__( 'eligible products (tagged "%s", in stock)', 'jezpress-woo-pack-builder' ),
+							esc_html( JWPB_Settings::get( 'seasonal_tag', 'seasonal' ) )
+						);
+						?>
+					</p>
+
+					<p class="form-field">
+						<label for="_pack_seasonal_count"></label>
+						<input type="number" id="_pack_seasonal_count" name="_pack_seasonal_count"
+							value="<?php echo esc_attr( $seasonal_count ); ?>" min="1" step="1" style="width:50px; margin-right:8px;">
+						<span><?php esc_html_e( 'products drawn from the seasonal pool', 'jezpress-woo-pack-builder' ); ?></span>
+					</p>
+
+					<?php if ( $pack_id ) : ?>
+						<p class="form-field">
+							<button type="button" id="jwpb-rotate-btn" class="button jwpb-rotate-btn"
+								data-pack-id="<?php echo esc_attr( $pack_id ); ?>"
+								data-nonce="<?php echo esc_attr( wp_create_nonce( 'jwpb_rotate_' . $pack_id ) ); ?>">
+								<?php esc_html_e( 'Rotate Now', 'jezpress-woo-pack-builder' ); ?>
+							</button>
+							<span id="jwpb-rotate-status" style="margin-left:12px;"></span>
+						</p>
+					<?php else : ?>
+						<p class="description" style="margin:0 24px 12px;">
+							<?php esc_html_e( 'Save the product first to enable manual rotation.', 'jezpress-woo-pack-builder' ); ?>
+						</p>
+					<?php endif; ?>
+				</div>
+
+			</div>
+
+			<div class="options_group">
+
+				<p class="form-field">
 					<label for="jwpb-product-search"><?php esc_html_e( 'Add Product', 'jezpress-woo-pack-builder' ); ?></label>
-					<select id="jwpb-product-search" class="wc-product-search"
+					<select id="jwpb-product-search" class="jwpb-product-search"
 						style="min-width:300px; max-width:60%;"
-						data-placeholder="<?php esc_attr_e( 'Search for a product…', 'jezpress-woo-pack-builder' ); ?>"
-						data-action="woocommerce_json_search_products"
-						data-exclude_type="pack">
+						data-placeholder="<?php esc_attr_e( 'Search for a product…', 'jezpress-woo-pack-builder' ); ?>">
 					</select>
 					<span id="jwpb-adding-spinner" class="spinner" style="float:none; margin:4px 6px; display:none; visibility:visible;"></span>
 				</p>
 
-				<div style="margin:0 24px 16px;">
+				<div style="margin: 12px 12px 20px 12px;">
+					<p class="description" style="margin: 0;">
+						<?php esc_html_e( 'Select products from the search. For variable products choose a specific variation and set a quantity.', 'jezpress-woo-pack-builder' ); ?>
+					</p>
 					<table id="jwpb-items-table" class="jwpb-items-table widefat">
 						<thead>
 							<tr>
@@ -133,64 +223,6 @@ class JWPB_Product_Type {
 				<?php /* Hidden field — JS writes JSON here before form submit */ ?>
 				<input type="hidden" id="jwpb-items-json" name="_pack_items_json" value="[]">
 
-				<p class="description" style="margin:0 24px 12px;">
-					<?php esc_html_e( 'Select products from the search. For variable products choose a specific variation and set a quantity.', 'jezpress-woo-pack-builder' ); ?>
-				</p>
-
-			</div>
-
-			<div class="options_group">
-
-				<p class="form-field">
-					<label for="_pack_item_label"><?php esc_html_e( 'Product Column Label', 'jezpress-woo-pack-builder' ); ?></label>
-					<input type="text" id="_pack_item_label" name="_pack_item_label" class="short"
-						value="<?php echo esc_attr( (string) get_post_meta( $pack_id, '_pack_item_label', true ) ); ?>"
-						placeholder="<?php esc_attr_e( 'Product', 'jezpress-woo-pack-builder' ); ?>">
-					<span class="description"><?php esc_html_e( 'Heading for the product name column in the pack contents table. Leave blank for default.', 'jezpress-woo-pack-builder' ); ?></span>
-				</p>
-
-				<p class="form-field">
-					<label for="_pack_qty_label"><?php esc_html_e( 'Quantity Column Label', 'jezpress-woo-pack-builder' ); ?></label>
-					<input type="text" id="_pack_qty_label" name="_pack_qty_label" class="short"
-						value="<?php echo esc_attr( (string) get_post_meta( $pack_id, '_pack_qty_label', true ) ); ?>"
-						placeholder="<?php esc_attr_e( 'Quantity', 'jezpress-woo-pack-builder' ); ?>">
-					<span class="description"><?php esc_html_e( 'Heading for the quantity column in the pack contents table. Leave blank for default.', 'jezpress-woo-pack-builder' ); ?></span>
-				</p>
-
-			</div>
-		</div>
-
-
-		<!-- PACK PRICING -->
-		<div id="jwpb_pricing_data" class="panel woocommerce_options_panel">
-			<div class="options_group">
-				<p class="form-field">
-					<label><?php esc_html_e( 'Pricing Mode', 'jezpress-woo-pack-builder' ); ?></label>
-					<label style="margin-right:16px;">
-						<input type="radio" name="_pack_pricing_mode" value="sum" <?php checked( $pricing_mode, 'sum' ); ?>>
-						<?php esc_html_e( 'Sum of products', 'jezpress-woo-pack-builder' ); ?>
-					</label>
-					<label>
-						<input type="radio" name="_pack_pricing_mode" value="fixed" <?php checked( $pricing_mode, 'fixed' ); ?>>
-						<?php esc_html_e( 'Fixed price', 'jezpress-woo-pack-builder' ); ?>
-					</label>
-				</p>
-
-				<p class="form-field jwpb-fixed-price-field" style="<?php echo 'fixed' !== $pricing_mode ? 'display:none;' : ''; ?>">
-					<label for="_pack_price_override">
-						<?php esc_html_e( 'Pack Price', 'jezpress-woo-pack-builder' ); ?>
-						(<?php echo esc_html( get_woocommerce_currency_symbol() ); ?>)
-					</label>
-					<input type="text" id="_pack_price_override" name="_pack_price_override"
-						class="short wc_input_price"
-						value="<?php echo esc_attr( wc_format_localized_price( $price_override ) ); ?>">
-				</p>
-
-				<p class="form-field jwpb-sum-price-preview" style="<?php echo 'sum' !== $pricing_mode ? 'display:none;' : ''; ?>">
-					<label><?php esc_html_e( 'Calculated Price', 'jezpress-woo-pack-builder' ); ?></label>
-					<span id="jwpb-sum-preview" class="description">—</span>
-					<span class="description" style="margin-left:6px;"><?php esc_html_e( '(updates when you save)', 'jezpress-woo-pack-builder' ); ?></span>
-				</p>
 			</div>
 		</div>
 
@@ -230,56 +262,6 @@ class JWPB_Product_Type {
 							value="<?php echo esc_attr( $sub_length ); ?>" min="0" step="1" style="width:80px;">
 						<span class="description"><?php esc_html_e( 'billing cycles (0 = indefinite)', 'jezpress-woo-pack-builder' ); ?></span>
 					</p>
-				</div>
-			</div>
-		</div>
-
-		<!-- SEASONAL -->
-		<div id="jwpb_seasonal_data" class="panel woocommerce_options_panel">
-			<div class="options_group">
-				<p class="form-field">
-					<label for="_pack_seasonal_enabled">
-						<input type="checkbox" id="_pack_seasonal_enabled" name="_pack_seasonal_enabled"
-							value="yes" <?php checked( $seasonal_enabled, 'yes' ); ?>>
-						<?php esc_html_e( 'Enable seasonal rotation', 'jezpress-woo-pack-builder' ); ?>
-					</label>
-				</p>
-
-				<div class="jwpb-seasonal-fields" style="<?php echo 'yes' !== $seasonal_enabled ? 'display:none;' : ''; ?>">
-					<p class="form-field">
-						<label for="_pack_seasonal_count"><?php esc_html_e( 'Items from pool', 'jezpress-woo-pack-builder' ); ?></label>
-						<input type="number" id="_pack_seasonal_count" name="_pack_seasonal_count"
-							value="<?php echo esc_attr( $seasonal_count ); ?>" min="1" step="1" style="width:80px;">
-						<span class="description"><?php esc_html_e( 'products drawn from the seasonal pool per rotation', 'jezpress-woo-pack-builder' ); ?></span>
-					</p>
-
-					<p class="form-field jwpb-seasonal-meta">
-						<label><?php esc_html_e( 'Last rotated', 'jezpress-woo-pack-builder' ); ?></label>
-						<span id="jwpb-last-rotated">
-							<?php echo $last_rotated ? esc_html( $last_rotated ) : esc_html__( 'Never', 'jezpress-woo-pack-builder' ); ?>
-						</span>
-					</p>
-
-					<p class="form-field jwpb-seasonal-meta">
-						<label><?php esc_html_e( 'Seasonal pool', 'jezpress-woo-pack-builder' ); ?></label>
-						<span id="jwpb-pool-count" class="description">—</span>
-						<?php esc_html_e( 'eligible products (tagged "seasonal", in stock)', 'jezpress-woo-pack-builder' ); ?>
-					</p>
-
-					<?php if ( $pack_id ) : ?>
-						<p class="form-field">
-							<button type="button" id="jwpb-rotate-btn" class="button jwpb-rotate-btn"
-								data-pack-id="<?php echo esc_attr( $pack_id ); ?>"
-								data-nonce="<?php echo esc_attr( wp_create_nonce( 'jwpb_rotate_' . $pack_id ) ); ?>">
-								<?php esc_html_e( 'Rotate Now', 'jezpress-woo-pack-builder' ); ?>
-							</button>
-							<span id="jwpb-rotate-status" style="margin-left:12px;"></span>
-						</p>
-					<?php else : ?>
-						<p class="description" style="margin:0 24px 12px;">
-							<?php esc_html_e( 'Save the product first to enable manual rotation.', 'jezpress-woo-pack-builder' ); ?>
-						</p>
-					<?php endif; ?>
 				</div>
 			</div>
 		</div>
@@ -440,7 +422,6 @@ class JWPB_Product_Type {
 				'error'            => __( 'An error occurred. Please try again.', 'jezpress-woo-pack-builder' ),
 				'loading'          => __( 'Loading…', 'jezpress-woo-pack-builder' ),
 				'noItems'          => __( 'No products added yet.', 'jezpress-woo-pack-builder' ),
-				'calculatedOnSave' => __( 'Calculated when saved.', 'jezpress-woo-pack-builder' ),
 			),
 		) );
 	}

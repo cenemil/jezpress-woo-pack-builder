@@ -26,8 +26,7 @@
 
 .jwpb-create-form-table th {
 	width: 160px;
-	padding: 10px 10px 10px 0;
-	vertical-align: middle;
+	padding: 14px 10px 10px 0;
 	font-weight: 600;
 }
 
@@ -82,7 +81,7 @@
 
 /* Actions cell — allow buttons to wrap neatly */
 .jwpb-actions-cell {
-	white-space: normal !important;
+	white-space: nowrap !important;
 }
 
 .jwpb-actions-cell .button {
@@ -151,6 +150,7 @@
 	font-size: 13px;
 	color: #3c434a;
 	padding-top: 5px;
+	white-space: nowrap;
 }
 
 .jwpb-option-control {

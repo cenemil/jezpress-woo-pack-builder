@@ -2,8 +2,9 @@
 
 /* Items table */
 .jwpb-items-table {
-	border-collapse: collapse;
-	margin: 0 24px 16px;
+	border-collapse: separate;
+	margin-top: 8px;
+	margin-bottom: 8px;
 }
 
 .jwpb-items-table th,
@@ -28,15 +29,9 @@
 	text-align: center;
 }
 
-/* Pricing preview bar */
-.jwpb-sum-price-preview .description {
-	display: inline-block;
-	background: #f6f7f7;
-	border: 1px solid #dcdcde;
-	border-radius: 3px;
-	padding: 4px 10px;
-	font-style: normal;
-	color: #3c434a;
+/* Description text in pack contents panel */
+#jwpb_contents_data .description {
+	font-size: 12px;
 }
 
 /* Seasonal meta info rows */

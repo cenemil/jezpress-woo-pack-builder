@@ -12,15 +12,26 @@
 			$('.hide_if_pack').hide();
 		} else {
 			$('.show_if_pack').hide();
+			$('.hide_if_pack').show(); // restore e.g. the General tab
 		}
 	}
 
-	$('#product-type').on('change', togglePackTabs);
+	// On type change: toggle visibility then, if switching to pack, activate
+	// Pack Contents tab in case no pack tab is already active (e.g. General was active).
+	$('#product-type').on('change', function () {
+		togglePackTabs();
+		if ($('#product-type').val() === 'pack' &&
+			!$('.product_data_tabs li.show_if_pack').hasClass('active')) {
+			$('.jwpb_contents_tab > a').trigger('click');
+		}
+	});
+
 	togglePackTabs();
 
 	// -------------------------------------------------------------------------
 	// Pack Contents — product search + row management
 	// -------------------------------------------------------------------------
+
 	function initProductSearch() {
 		var $search = $('#jwpb-product-search');
 		if (!$search.length || typeof $.fn.select2 === 'undefined') {
@@ -134,7 +145,6 @@
 
 		$('#jwpb-items-tbody').append($tr);
 		toggleEmptyState();
-		updateSumPreview();
 	}
 
 	// Variation dropdown change — update price cell from stored variation data.
@@ -150,15 +160,11 @@
 			}
 		});
 
-		updateSumPreview();
 	});
-
-	$(document).on('change', '.jwpb-qty-input', updateSumPreview);
 
 	$(document).on('click', '.jwpb-remove-item', function () {
 		$(this).closest('tr').remove();
 		toggleEmptyState();
-		updateSumPreview();
 	});
 
 	function toggleEmptyState() {
@@ -198,20 +204,10 @@
 	$('input[name="_pack_pricing_mode"]').on('change', function () {
 		if ($(this).val() === 'fixed') {
 			$('.jwpb-fixed-price-field').show();
-			$('.jwpb-sum-price-preview').hide();
 		} else {
 			$('.jwpb-fixed-price-field').hide();
-			$('.jwpb-sum-price-preview').show();
-			updateSumPreview();
 		}
 	});
-
-	function updateSumPreview() {
-		if ($('input[name="_pack_pricing_mode"]:checked').val() !== 'sum') {
-			return;
-		}
-		$('#jwpb-sum-preview').text(jwpbData.i18n.calculatedOnSave || '—');
-	}
 
 	// -------------------------------------------------------------------------
 	// Subscription — toggle fields on checkbox change
@@ -313,7 +309,16 @@
 			fetchPoolCount();
 		}
 
-		updateSumPreview();
+		// Deferred: run after WooCommerce's own product-type init so our tab
+		// activation wins regardless of which script initialised first.
+		// If the page loaded as a pack product and no pack tab is yet active
+		// (General tab was active and is now hidden), activate Pack Contents.
+		setTimeout(function () {
+			if ($('#product-type').val() === 'pack' &&
+				!$('.product_data_tabs li.show_if_pack').hasClass('active')) {
+				$('.jwpb_contents_tab > a').trigger('click');
+			}
+		}, 0);
 	});
 
 }(jQuery));

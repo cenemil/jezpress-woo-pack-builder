@@ -134,10 +134,10 @@ class JWPB_Admin {
 
 			<div class="jwpb-settings-columns">
 
-				<!-- Plugin Options card -->
+				<!-- Settings card -->
 				<div class="jwpb-card jwpb-card--options">
 					<h2 class="jwpb-card-title">
-						<?php esc_html_e( 'Plugin Options', 'jezpress-woo-pack-builder' ); ?>
+						<?php esc_html_e( 'Settings', 'jezpress-woo-pack-builder' ); ?>
 					</h2>
 
 					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
@@ -159,6 +159,20 @@ class JWPB_Admin {
 								</select>
 								<p class="description">
 									<?php esc_html_e( 'Automatically inject the pack contents table into the single-product template. Applies only to Pack type products. Choose None to place the table manually with the shortcode.', 'jezpress-woo-pack-builder' ); ?>
+								</p>
+							</div>
+						</div>
+
+						<div class="jwpb-option-row">
+							<label class="jwpb-option-label" for="seasonal_tag">
+								<?php esc_html_e( 'Seasonal Pool Tag', 'jezpress-woo-pack-builder' ); ?>
+							</label>
+							<div class="jwpb-option-control">
+								<input type="text" id="seasonal_tag" name="seasonal_tag" class="regular-text"
+									value="<?php echo esc_attr( JWPB_Settings::get( 'seasonal_tag', 'seasonal' ) ); ?>"
+									placeholder="seasonal">
+								<p class="description">
+									<?php esc_html_e( 'WooCommerce product tag slug used to identify products eligible for seasonal rotation. Products must also be In Stock. Defaults to "seasonal".', 'jezpress-woo-pack-builder' ); ?>
 								</p>
 							</div>
 						</div>
@@ -231,7 +245,7 @@ class JWPB_Admin {
 
 					<h3 class="jwpb-kb-section"><?php esc_html_e( 'Seasonal rotation', 'jezpress-woo-pack-builder' ); ?></h3>
 					<p class="description">
-						<?php esc_html_e( 'Tag any product with the WooCommerce tag "seasonal" and ensure it is In Stock. Open the Seasonal tab on a pack and click Rotate Now to randomly draw items from the pool.', 'jezpress-woo-pack-builder' ); ?>
+						<?php esc_html_e( 'Tag any product with the configured Seasonal Pool Tag and ensure it is In Stock. Open the Seasonal tab on a pack and click Rotate Now to randomly draw items from the pool.', 'jezpress-woo-pack-builder' ); ?>
 					</p>
 				</div>
 

@@ -99,8 +99,14 @@ class JWPB_Settings {
 			$placement = 'none';
 		}
 
+		$seasonal_tag = sanitize_title( wp_unslash( $_POST['seasonal_tag'] ?? 'seasonal' ) );
+		if ( '' === $seasonal_tag ) {
+			$seasonal_tag = 'seasonal';
+		}
+
 		$settings                            = get_option( self::OPTION_KEY, array() );
 		$settings['pack_contents_placement'] = $placement;
+		$settings['seasonal_tag']            = $seasonal_tag;
 		update_option( self::OPTION_KEY, $settings );
 
 		wp_safe_redirect(
