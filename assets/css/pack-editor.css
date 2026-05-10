@@ -1,0 +1,77 @@
+/* JezPress Woo Pack Builder — Admin Pack Editor Styles */
+
+/* Items table */
+.jwpb-items-table {
+	border-collapse: collapse;
+	margin: 0 24px 16px;
+}
+
+.jwpb-items-table th,
+.jwpb-items-table td {
+	padding: 8px 10px;
+	vertical-align: middle;
+	border-bottom: 1px solid #f0f0f1;
+}
+
+.jwpb-items-table thead th {
+	background: #f6f7f7;
+	font-weight: 600;
+	color: #3c434a;
+}
+
+.jwpb-items-table tbody tr:hover {
+	background: #f6f7f7;
+}
+
+.jwpb-items-table .jwpb-qty-input {
+	width: 60px;
+	text-align: center;
+}
+
+/* Pricing preview bar */
+.jwpb-sum-price-preview .description {
+	display: inline-block;
+	background: #f6f7f7;
+	border: 1px solid #dcdcde;
+	border-radius: 3px;
+	padding: 4px 10px;
+	font-style: normal;
+	color: #3c434a;
+}
+
+/* Seasonal meta info rows */
+.jwpb-seasonal-meta label {
+	font-weight: normal;
+	color: #646970;
+}
+
+.jwpb-seasonal-meta span {
+	font-weight: 600;
+}
+
+/* Rotate button */
+.jwpb-rotate-btn {
+	background: #2271b1;
+	border-color: #2271b1;
+	color: #fff;
+}
+
+.jwpb-rotate-btn:hover,
+.jwpb-rotate-btn:focus {
+	background: #135e96;
+	border-color: #135e96;
+	color: #fff;
+}
+
+.jwpb-rotate-btn:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
+/* Cart contents summary */
+.jwpb-cart-contents {
+	display: block;
+	margin-top: 2px;
+	font-size: 0.85em;
+	color: #646970;
+}

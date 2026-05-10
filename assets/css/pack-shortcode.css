@@ -1,0 +1,72 @@
+/* JezPress Woo Pack Builder — [jwpb_pack_contents] frontend table */
+
+.jwpb-pack-contents {
+	margin: 1.5em 0;
+}
+
+.jwpb-pack-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 0.95em;
+	line-height: 1.5;
+}
+
+.jwpb-pack-table thead th {
+	padding: 10px 14px;
+	text-align: left;
+	font-weight: 600;
+	color: #333;
+	background: #f8f8f8;
+	border-top: 2px solid #e0e0e0;
+	border-bottom: 2px solid #e0e0e0;
+}
+
+.jwpb-pack-table tbody td {
+	padding: 10px 14px;
+	border-bottom: 1px solid #ececec;
+	vertical-align: middle;
+}
+
+.jwpb-pack-table tbody tr:last-child td {
+	border-bottom: none;
+}
+
+.jwpb-pack-table tbody tr:hover td {
+	background: #fafafa;
+}
+
+/* Product column */
+.jwpb-col-product {
+	width: auto;
+}
+
+/* Qty column */
+.jwpb-col-qty {
+	width: 60px;
+	text-align: center !important;
+	font-weight: 500;
+	color: #444;
+}
+
+/* Clickable product name */
+.jwpb-product-link {
+	font-weight: 500;
+	color: inherit;
+	text-decoration: none;
+	transition: color 0.15s ease;
+}
+
+.jwpb-product-link:hover,
+.jwpb-product-link:focus {
+	color: var(--wp--preset--color--primary, #0071a1);
+	text-decoration: underline;
+}
+
+/* Variation sub-label (e.g. "Red / Large") */
+.jwpb-variation-label {
+	display: block;
+	margin-top: 2px;
+	font-size: 0.85em;
+	color: #767676;
+	font-style: italic;
+}

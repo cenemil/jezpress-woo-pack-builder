@@ -1,0 +1,210 @@
+<?php
+/**
+ * JWPB_Shortcode — [jwpb_pack_contents] shortcode.
+ *
+ * Renders the item list of a pack product as a table. Product names are
+ * linked to their shop pages; variation items link to the parent product page
+ * with attribute query-params so WooCommerce pre-selects the variant on load.
+ *
+ * Usage:
+ *   [jwpb_pack_contents]           — auto-detects current product page
+ *   [jwpb_pack_contents id="123"]  — explicit pack product ID
+ *
+ * @package JezPress_Woo_Pack_Builder
+ * @since   1.0.0
+ */
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+class JWPB_Shortcode {
+
+	public static function init() {
+		add_shortcode( 'jwpb_pack_contents', array( __CLASS__, 'render' ) );
+	}
+
+	/**
+	 * Shortcode callback.
+	 *
+	 * @param array  $atts    Shortcode attributes.
+	 * @param string $content Unused inner content.
+	 * @return string HTML or empty string.
+	 */
+	public static function render( $atts, $content = '' ) {
+		$atts = shortcode_atts( array( 'id' => 0 ), $atts, 'jwpb_pack_contents' );
+
+		$pack_id = absint( $atts['id'] );
+
+		// Auto-detect: use the global $product inside a WC single-product template,
+		// or fall back to the current post ID on a product singular page.
+		if ( ! $pack_id ) {
+			global $product;
+			if ( $product instanceof WC_Product ) {
+				$pack_id = $product->get_id();
+			} elseif ( is_singular( 'product' ) ) {
+				$pack_id = get_the_ID();
+			}
+		}
+
+		if ( ! $pack_id ) {
+			return '';
+		}
+
+		$pack = wc_get_product( $pack_id );
+		if ( ! ( $pack instanceof WC_Product_Pack ) ) {
+			return '';
+		}
+
+		$items = $pack->get_pack_items();
+		if ( empty( $items ) ) {
+			return '';
+		}
+
+		wp_enqueue_style(
+			'jwpb-pack-shortcode',
+			JWPB_URL . 'assets/css/pack-shortcode.css',
+			array(),
+			JWPB_VERSION
+		);
+
+		$item_label = (string) get_post_meta( $pack_id, '_pack_item_label', true );
+		$qty_label  = (string) get_post_meta( $pack_id, '_pack_qty_label',  true );
+		$item_label = '' !== $item_label ? $item_label : __( 'Product',  'jezpress-woo-pack-builder' );
+		$qty_label  = '' !== $qty_label  ? $qty_label  : __( 'Quantity', 'jezpress-woo-pack-builder' );
+
+		// Build row data — resolve product/variation details once per item.
+		$rows = array();
+
+		foreach ( $items as $item ) {
+			$product_id   = (int) $item['product_id'];
+			$variation_id = (int) $item['variation_id'];
+			$qty          = max( 1, (int) $item['quantity'] );
+
+			$parent = wc_get_product( $product_id );
+			if ( ! $parent ) {
+				continue;
+			}
+
+			if ( $variation_id ) {
+				$variation = wc_get_product( $variation_id );
+
+				if ( $variation instanceof WC_Product_Variation ) {
+					$url   = self::variation_url( $variation, $parent );
+					$label = self::variation_label( $variation );
+				} else {
+					// Variation deleted or unavailable — fall back to parent.
+					$url   = get_permalink( $product_id );
+					$label = '';
+				}
+			} else {
+				$url   = get_permalink( $product_id );
+				$label = '';
+			}
+
+			$rows[] = array(
+				'name'  => $parent->get_name(),
+				'url'   => $url,
+				'label' => $label,
+				'qty'   => $qty,
+			);
+		}
+
+		if ( empty( $rows ) ) {
+			return '';
+		}
+
+		ob_start();
+		?>
+		<div class="jwpb-pack-contents">
+			<table class="jwpb-pack-table">
+				<thead>
+					<tr>
+						<th class="jwpb-col-product"><?php echo esc_html( $item_label ); ?></th>
+						<th class="jwpb-col-qty"><?php echo esc_html( $qty_label ); ?></th>
+					</tr>
+				</thead>
+				<tbody>
+					<?php foreach ( $rows as $row ) : ?>
+					<tr class="jwpb-pack-row">
+						<td class="jwpb-col-product">
+							<a href="<?php echo esc_url( $row['url'] ); ?>" class="jwpb-product-link">
+								<?php echo esc_html( $row['name'] ); ?>
+							</a>
+							<?php if ( $row['label'] ) : ?>
+								<span class="jwpb-variation-label">
+									<?php echo esc_html( $row['label'] ); ?>
+								</span>
+							<?php endif; ?>
+						</td>
+						<td class="jwpb-col-qty">
+							<?php echo esc_html( $row['qty'] ); ?>
+						</td>
+					</tr>
+					<?php endforeach; ?>
+				</tbody>
+			</table>
+		</div>
+		<?php
+		return ob_get_clean();
+	}
+
+	/**
+	 * Build the parent product URL with variation attributes as query params.
+	 *
+	 * WooCommerce reads these on page load and pre-selects the matching
+	 * variation: e.g. ?attribute_pa_color=red&attribute_pa_size=large
+	 *
+	 * "Any" attributes (empty string slug) are omitted — they cannot be
+	 * pre-selected to a specific value.
+	 *
+	 * @param WC_Product_Variation $variation
+	 * @param WC_Product           $parent
+	 * @return string
+	 */
+	private static function variation_url( WC_Product_Variation $variation, WC_Product $parent ) {
+		$base       = get_permalink( $parent->get_id() );
+		$attributes = $variation->get_variation_attributes();
+
+		// Drop "any" slots — keep only explicitly chosen attribute values.
+		$query_args = array_filter( $attributes, function ( $value ) {
+			return '' !== $value;
+		} );
+
+		return empty( $query_args ) ? $base : add_query_arg( $query_args, $base );
+	}
+
+	/**
+	 * Resolve variation attributes to a human-readable label ("Red / Large").
+	 *
+	 * Taxonomy-based attributes (pa_*) are resolved to term names; custom
+	 * (non-taxonomy) attributes use the raw slug value.
+	 *
+	 * @param WC_Product_Variation $variation
+	 * @return string  Empty string when no specific attributes are set.
+	 */
+	private static function variation_label( WC_Product_Variation $variation ) {
+		$attributes = array_filter( $variation->get_variation_attributes(), function ( $v ) {
+			return '' !== $v;
+		} );
+
+		if ( empty( $attributes ) ) {
+			return '';
+		}
+
+		$parts = array();
+
+		foreach ( $attributes as $key => $slug ) {
+			$taxonomy = str_replace( 'attribute_', '', $key );
+
+			if ( taxonomy_exists( $taxonomy ) ) {
+				$term     = get_term_by( 'slug', $slug, $taxonomy );
+				$parts[]  = $term ? $term->name : $slug;
+			} else {
+				$parts[] = $slug;
+			}
+		}
+
+		return implode( ' / ', $parts );
+	}
+}
