@@ -95,7 +95,7 @@ Products must be tagged with the configured **Seasonal Pool Tag** (stored as `se
 
 ### Admin Location
 
-WooCommerce → **Packs** (requires `manage_woocommerce` cap). Tab navigation: **Settings** | **Packs** (only shown when licensed) | **License**. Unlicensed users are redirected to the Settings tab.
+WooCommerce → **Packs** (requires `manage_woocommerce` cap). Tab navigation: **Settings** | **Packs** | **License**. Unlicensed installs are forced to the **License** tab only — Settings and Packs tabs are hidden until a valid license key is entered.
 
 ### Settings (`JWPB_Settings`)
 

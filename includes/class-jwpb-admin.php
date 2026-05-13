@@ -83,20 +83,19 @@ class JWPB_Admin {
 		$license     = JWPB_License::get_instance();
 		$is_licensed = $license && $license->is_valid();
 
-		// Unlicensed users may access Settings and License but not the Packs list.
-		if ( ! $is_licensed && 'packs' === $tab ) {
-			$tab = 'settings';
+		if ( ! $is_licensed && 'license' !== $tab ) {
+			$tab = 'license';
 		}
 		?>
 		<div class="wrap">
 			<h1><?php esc_html_e( 'Pack Builder', 'jezpress-woo-pack-builder' ); ?></h1>
 
 			<nav class="nav-tab-wrapper woo-nav-tab-wrapper">
-				<a href="<?php echo esc_url( admin_url( 'admin.php?page=jwpb-pack-builder&tab=settings' ) ); ?>"
-				   class="nav-tab <?php echo 'settings' === $tab ? 'nav-tab-active' : ''; ?>">
-					<?php esc_html_e( 'Settings', 'jezpress-woo-pack-builder' ); ?>
-				</a>
 				<?php if ( $is_licensed ) : ?>
+					<a href="<?php echo esc_url( admin_url( 'admin.php?page=jwpb-pack-builder&tab=settings' ) ); ?>"
+					   class="nav-tab <?php echo 'settings' === $tab ? 'nav-tab-active' : ''; ?>">
+						<?php esc_html_e( 'Settings', 'jezpress-woo-pack-builder' ); ?>
+					</a>
 					<a href="<?php echo esc_url( admin_url( 'admin.php?page=jwpb-pack-builder&tab=packs' ) ); ?>"
 					   class="nav-tab <?php echo 'packs' === $tab ? 'nav-tab-active' : ''; ?>">
 						<?php esc_html_e( 'Packs', 'jezpress-woo-pack-builder' ); ?>
