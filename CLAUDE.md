@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Purpose
 
-`jezpress-woo-pack-builder` is a proprietary JezPress WordPress plugin that adds a custom WooCommerce product type called "Pack". Staff build packs (hampers, gift boxes, meal kits) from a product editor UI. Packs support flexible pricing, optional subscription billing, and seasonal item rotation.
+`jezpress-woo-pack-builder` is a proprietary Jezweb WordPress plugin that adds a custom WooCommerce product type called "Pack". Staff build packs (hampers, gift boxes, meal kits) from a product editor UI. Packs support flexible pricing, optional subscription billing, and seasonal item rotation.
 
 **Dependencies:** WooCommerce (required). JezPress WC Subscription or WooCommerce Subscriptions (optional — subscription tab saves data but does nothing without an engine). WordPress 5.8+, PHP 7.4+.
 

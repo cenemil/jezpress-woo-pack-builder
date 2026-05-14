@@ -1,11 +1,13 @@
 ===  JezPress Woo Pack Builder ===
 Contributors: jezweb
+Author: Jezweb
+Author URI: https://jezweb.com.au
 Tags: woocommerce, bundles, hampers, gift boxes, subscriptions, seasonal
 Requires at least: 5.8
 Tested up to: 6.7
 Requires PHP: 7.4
 WC requires at least: 6.0
-Stable tag: 1.1.2
+Stable tag: 1.1.3
 License: Proprietary
 
 Build product packs (hampers, gift boxes, meal kits) with flexible pricing, subscription billing, and seasonal rotation.
@@ -34,6 +36,11 @@ JezPress Woo Pack Builder adds a "Pack" product type to WooCommerce. Staff build
 4. Create packs via Products → Add New → select product type "Pack"
 
 == Changelog ==
+
+= 1.1.3 =
+* Updated author and plugin URI to Jezweb (jezweb.com.au)
+* License page migrated to shared admin CSS classes; enqueues admin.css via its own hook
+* Added .admin-page-card-full modifier for full-width card layouts
 
 = 1.1.2 =
 * Renamed asset files (removed pack- prefix): pack-admin → admin, pack-editor → editor, pack-shortcode → shortcode
