@@ -106,7 +106,7 @@ Option key `jwpb_settings` (serialised array). Current keys:
 | `pack_contents_placement` | `none` / `after_price` / `after_excerpt` / `after_add_to_cart` / `after_meta` / `after_summary` | Hooks `JWPB_Shortcode::render()` into the matching WC product template action; fires only when `$product instanceof WC_Product_Pack` |
 | `seasonal_tag` | any WC product tag slug | Tag used to identify the seasonal pool; defaults to `"seasonal"` |
 
-### Frontend JS (`assets/js/pack-editor.js`)
+### Frontend JS (`assets/js/editor.js`)
 
 Loaded only on the WC product edit screen (when product type is `pack`). Uses jQuery + WC's bundled Select2. Key behaviours:
 

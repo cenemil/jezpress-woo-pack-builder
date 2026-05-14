@@ -26,14 +26,14 @@ class JWPB_Admin {
 
 		wp_enqueue_style(
 			'jwpb-pack-admin',
-			JWPB_URL . 'assets/css/pack-admin.css',
+			JWPB_URL . 'assets/css/admin.css',
 			array(),
 			JWPB_VERSION
 		);
 
 		wp_enqueue_script(
 			'jwpb-pack-admin',
-			JWPB_URL . 'assets/js/pack-admin.js',
+			JWPB_URL . 'assets/js/admin.js',
 			array( 'jquery' ),
 			JWPB_VERSION,
 			true
@@ -123,31 +123,32 @@ class JWPB_Admin {
 		$current_placement = JWPB_Settings::get( 'pack_contents_placement', 'none' );
 		$placement_labels  = JWPB_Settings::placement_labels();
 		?>
-		<div class="jwpb-settings-wrap">
+		<div class="admin-page-wrap">
 
 			<?php if ( $saved ) : ?>
-				<div class="notice notice-success inline jwpb-settings-notice">
+				<div class="notice notice-success inline admin-page-notice">
 					<p><?php esc_html_e( 'Settings saved.', 'jezpress-woo-pack-builder' ); ?></p>
 				</div>
 			<?php endif; ?>
 
-			<div class="jwpb-settings-columns">
+			<!-- Settings card -->
+			<div class="admin-page-card">
+				<h2 class="admin-page-card-title">
+					<?php esc_html_e( 'Settings', 'jezpress-woo-pack-builder' ); ?>
+				</h2>
 
-				<!-- Settings card -->
-				<div class="jwpb-card jwpb-card--options">
-					<h2 class="jwpb-card-title">
-						<?php esc_html_e( 'Settings', 'jezpress-woo-pack-builder' ); ?>
-					</h2>
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+					<?php wp_nonce_field( 'jwpb_save_settings' ); ?>
+					<input type="hidden" name="action" value="jwpb_save_settings">
 
-					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-						<?php wp_nonce_field( 'jwpb_save_settings' ); ?>
-						<input type="hidden" name="action" value="jwpb_save_settings">
-
-						<div class="jwpb-option-row">
-							<label class="jwpb-option-label" for="pack_contents_placement">
-								<?php esc_html_e( 'Pack Contents Placement', 'jezpress-woo-pack-builder' ); ?>
-							</label>
-							<div class="jwpb-option-control">
+					<table class="form-table" role="presentation">
+						<tr>
+							<th scope="row">
+								<label for="pack_contents_placement">
+									<?php esc_html_e( 'Pack Contents Placement', 'jezpress-woo-pack-builder' ); ?>
+								</label>
+							</th>
+							<td>
 								<select id="pack_contents_placement" name="pack_contents_placement" class="jwpb-select">
 									<?php foreach ( $placement_labels as $value => $label ) : ?>
 										<option value="<?php echo esc_attr( $value ); ?>"
@@ -159,61 +160,67 @@ class JWPB_Admin {
 								<p class="description">
 									<?php esc_html_e( 'Automatically inject the pack contents table into the single-product template. Applies only to Pack type products. Choose None to place the table manually with the shortcode.', 'jezpress-woo-pack-builder' ); ?>
 								</p>
-							</div>
-						</div>
+							</td>
+						</tr>
 
-						<div class="jwpb-option-row">
-							<label class="jwpb-option-label" for="seasonal_tag">
-								<?php esc_html_e( 'Seasonal Pool Tag', 'jezpress-woo-pack-builder' ); ?>
-							</label>
-							<div class="jwpb-option-control">
+						<tr>
+							<th scope="row">
+								<label for="seasonal_tag">
+									<?php esc_html_e( 'Seasonal Pool Tag', 'jezpress-woo-pack-builder' ); ?>
+								</label>
+							</th>
+							<td>
 								<input type="text" id="seasonal_tag" name="seasonal_tag" class="regular-text"
 									value="<?php echo esc_attr( JWPB_Settings::get( 'seasonal_tag', 'seasonal' ) ); ?>"
 									placeholder="seasonal">
 								<p class="description">
 									<?php esc_html_e( 'WooCommerce product tag slug used to identify products eligible for seasonal rotation. Products must also be In Stock. Defaults to "seasonal".', 'jezpress-woo-pack-builder' ); ?>
 								</p>
-							</div>
-						</div>
+							</td>
+						</tr>
+					</table>
 
-						<div class="jwpb-option-footer">
-							<?php submit_button( __( 'Save Settings', 'jezpress-woo-pack-builder' ), 'primary', 'submit', false ); ?>
-						</div>
-					</form>
-				</div>
+					<p class="submit">
+						<?php submit_button( __( 'Save Settings', 'jezpress-woo-pack-builder' ), 'primary', 'submit', false ); ?>
+					</p>
+				</form>
+			</div>
 
-				<!-- Knowledgebase card -->
-				<div class="jwpb-card jwpb-card--kb">
-					<h2 class="jwpb-card-title">
-						<?php esc_html_e( 'Knowledgebase', 'jezpress-woo-pack-builder' ); ?>
-					</h2>
+			<!-- Knowledgebase card -->
+			<div class="admin-page-card">
+				<h2 class="admin-page-card-title">
+					<?php esc_html_e( 'Knowledgebase', 'jezpress-woo-pack-builder' ); ?>
+				</h2>
 
-					<h3 class="jwpb-kb-section"><?php esc_html_e( 'Shortcode', 'jezpress-woo-pack-builder' ); ?></h3>
+				<div class="admin-page-card-section">
+					<h3 class="admin-page-card-section-title"><?php esc_html_e( 'Shortcode', 'jezpress-woo-pack-builder' ); ?></h3>
 					<p><?php esc_html_e( 'Embed the pack contents table on any page or post:', 'jezpress-woo-pack-builder' ); ?></p>
-
-					<div class="jwpb-code-block">
+					<div class="admin-page-code-block">
 						<code>[jwpb_pack_contents]</code>
 					</div>
 					<p class="description">
 						<?php esc_html_e( 'Auto-detects the current pack when placed inside a single product template.', 'jezpress-woo-pack-builder' ); ?>
 					</p>
-
-					<div class="jwpb-code-block" style="margin-top:8px;">
+					<div class="admin-page-code-block" style="margin-top:8px;">
 						<code>[jwpb_pack_contents id="123"]</code>
 					</div>
 					<p class="description">
 						<?php esc_html_e( 'Display a specific pack by product ID — works on any page.', 'jezpress-woo-pack-builder' ); ?>
 					</p>
-
-					<h3 class="jwpb-kb-section"><?php esc_html_e( 'What the table displays', 'jezpress-woo-pack-builder' ); ?></h3>
-					<ul class="jwpb-kb-list">
+				</div>
+				
+				<div class="admin-page-card-section">
+					<h3 class="admin-page-card-section-title"><?php esc_html_e( 'What the table displays', 'jezpress-woo-pack-builder' ); ?></h3>
+					<ul class="admin-page-card-section-ul">
 						<li><?php esc_html_e( 'Each item\'s product name, linked to its shop page.', 'jezpress-woo-pack-builder' ); ?></li>
 						<li><?php esc_html_e( 'For variation items, a sub-label (e.g. Red / Large) is shown and the link pre-selects that variant on the product page.', 'jezpress-woo-pack-builder' ); ?></li>
 						<li><?php esc_html_e( 'Item quantity.', 'jezpress-woo-pack-builder' ); ?></li>
 					</ul>
+				</div>
 
-					<h3 class="jwpb-kb-section"><?php esc_html_e( 'Pricing modes', 'jezpress-woo-pack-builder' ); ?></h3>
-					<ul class="jwpb-kb-list">
+				<div class="admin-page-card-section">
+					<h3 class="admin-page-card-section-title"><?php esc_html_e( 'Pricing modes', 'jezpress-woo-pack-builder' ); ?></h3>
+					<ul class="admin-page-card-section-ul">
 						<li>
 							<strong><?php esc_html_e( 'Sum of products', 'jezpress-woo-pack-builder' ); ?></strong>
 							&mdash; <?php esc_html_e( 'Pack price is calculated from current constituent product prices. Updates automatically when item prices change.', 'jezpress-woo-pack-builder' ); ?>
@@ -223,9 +230,11 @@ class JWPB_Admin {
 							&mdash; <?php esc_html_e( 'A set price independent of constituent products.', 'jezpress-woo-pack-builder' ); ?>
 						</li>
 					</ul>
+				</div>
 
-					<h3 class="jwpb-kb-section"><?php esc_html_e( 'Creating your first pack', 'jezpress-woo-pack-builder' ); ?></h3>
-					<ol class="jwpb-kb-list">
+				<div class="admin-page-card-section">
+					<h3 class="admin-page-card-section-title"><?php esc_html_e( 'Creating your first pack', 'jezpress-woo-pack-builder' ); ?></h3>
+					<ol class="admin-page-card-section-ol">
 						<li>
 							<?php
 							printf(
@@ -241,13 +250,14 @@ class JWPB_Admin {
 						<li><?php esc_html_e( 'Optionally configure subscription billing (Subscription tab) or seasonal rotation (Seasonal tab).', 'jezpress-woo-pack-builder' ); ?></li>
 						<li><?php esc_html_e( 'Publish the product.', 'jezpress-woo-pack-builder' ); ?></li>
 					</ol>
+				</div>
 
-					<h3 class="jwpb-kb-section"><?php esc_html_e( 'Seasonal rotation', 'jezpress-woo-pack-builder' ); ?></h3>
+				<div class="admin-page-card-section">
+					<h3 class="admin-page-card-section-title"><?php esc_html_e( 'Seasonal rotation', 'jezpress-woo-pack-builder' ); ?></h3>
 					<p class="description">
 						<?php esc_html_e( 'Tag any product with the configured Seasonal Pool Tag and ensure it is In Stock. Open the Seasonal tab on a pack and click Rotate Now to randomly draw items from the pool.', 'jezpress-woo-pack-builder' ); ?>
 					</p>
 				</div>
-
 			</div>
 		</div>
 		<?php
@@ -261,10 +271,10 @@ class JWPB_Admin {
 			'return' => 'ids',
 		) );
 		?>
-		<div style="margin-top:20px;">
+		<div class="admin-page-wrap">
 
 			<?php if ( isset( $_GET['updated'] ) && '1' === $_GET['updated'] ) : ?>
-				<div class="notice notice-success inline" style="margin:0 0 16px;">
+				<div class="notice notice-success inline admin-page-notice">
 					<p><?php esc_html_e( 'Pack updated successfully.', 'jezpress-woo-pack-builder' ); ?></p>
 				</div>
 			<?php endif; ?>
@@ -274,11 +284,11 @@ class JWPB_Admin {
 			</button>
 
 			<!-- Dual-mode pack form panel (create + edit) -->
-			<div id="jwpb-pack-form-panel" class="jwpb-create-panel" style="display:none;">
+			<div id="jwpb-pack-form-panel" class="jwpb-create-panel admin-page-card" style="display:none;">
 
 				<input type="hidden" id="jwpb-form-pack-id" value="0">
 
-				<h3 id="jwpb-form-title"><?php esc_html_e( 'New Pack', 'jezpress-woo-pack-builder' ); ?></h3>
+				<h3 id="jwpb-form-title" class="admin-page-card-title"><?php esc_html_e( 'New Pack', 'jezpress-woo-pack-builder' ); ?></h3>
 
 				<table class="form-table jwpb-create-form-table">
 					<tr>
@@ -297,7 +307,7 @@ class JWPB_Admin {
 						<th scope="row"><?php esc_html_e( 'Pricing Mode', 'jezpress-woo-pack-builder' ); ?></th>
 						<td>
 							<fieldset>
-								<label style="margin-right:16px;">
+								<label style="margin-right:16px !important;">
 									<input type="radio" name="jwpb_new_pricing_mode" value="sum" checked>
 									<?php esc_html_e( 'Sum of products', 'jezpress-woo-pack-builder' ); ?>
 								</label>
@@ -355,7 +365,7 @@ class JWPB_Admin {
 					</tr>
 				</table>
 
-				<div class="jwpb-create-actions">
+				<div class="admin-page-card-submit">
 					<button type="button" id="jwpb-form-submit" class="button button-primary">
 						<?php esc_html_e( 'Create Pack', 'jezpress-woo-pack-builder' ); ?>
 					</button>

@@ -63,7 +63,7 @@ class JWPB_Shortcode {
 
 		wp_enqueue_style(
 			'jwpb-pack-shortcode',
-			JWPB_URL . 'assets/css/pack-shortcode.css',
+			JWPB_URL . 'assets/css/shortcode.css',
 			array(),
 			JWPB_VERSION
 		);

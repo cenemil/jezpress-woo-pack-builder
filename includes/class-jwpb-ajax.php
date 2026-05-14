@@ -27,7 +27,7 @@ class JWPB_Ajax {
 
 	/**
 	 * Return product type, price HTML, and variation list for a given product ID.
-	 * Used by pack-editor.js immediately after a product is selected in search.
+	 * Used by editor.js immediately after a product is selected in search.
 	 *
 	 * POST params: product_id (int), nonce (string: jwpb_admin_nonce)
 	 *

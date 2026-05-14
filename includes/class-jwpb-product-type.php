@@ -208,7 +208,7 @@ class JWPB_Product_Type {
 							</tr>
 						</thead>
 						<tbody id="jwpb-items-tbody">
-							<!-- Rows rendered by pack-editor.js from jwpbData.existingItems -->
+							<!-- Rows rendered by editor.js from jwpbData.existingItems -->
 						</tbody>
 						<tfoot id="jwpb-items-empty" style="display:none;">
 							<tr>
@@ -389,14 +389,14 @@ class JWPB_Product_Type {
 
 		wp_enqueue_style(
 			'jwpb-pack-editor',
-			JWPB_URL . 'assets/css/pack-editor.css',
+			JWPB_URL . 'assets/css/editor.css',
 			array(),
 			JWPB_VERSION
 		);
 
 		wp_enqueue_script(
 			'jwpb-pack-editor',
-			JWPB_URL . 'assets/js/pack-editor.js',
+			JWPB_URL . 'assets/js/editor.js',
 			array( 'jquery', 'select2' ),
 			JWPB_VERSION,
 			true
