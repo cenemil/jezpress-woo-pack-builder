@@ -61,6 +61,10 @@
 	margin-top: 20px;
 }
 
+table.form-table td p {
+    font-size: 13px;
+}
+
 /* Inline spinner (WP spinners are absolutely positioned by default) */
 .jwpb-inline-spinner {
 	float: none !important;
