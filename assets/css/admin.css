@@ -15,6 +15,10 @@
 	max-width: 760px;
 }
 
+.admin-page-card.admin-page-card-full {
+	max-width: 100%;
+}
+
 .admin-page-card-title {
 	margin-top: 0;
 	padding-bottom: 12px;
