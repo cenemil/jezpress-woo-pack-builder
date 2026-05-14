@@ -7,7 +7,7 @@ Requires at least: 5.8
 Tested up to: 6.7
 Requires PHP: 7.4
 WC requires at least: 6.0
-Stable tag: 1.1.3
+Stable tag: 1.1.4
 License: Proprietary
 
 Build product packs (hampers, gift boxes, meal kits) with flexible pricing, subscription billing, and seasonal rotation.
@@ -36,6 +36,9 @@ JezPress Woo Pack Builder adds a "Pack" product type to WooCommerce. Staff build
 4. Create packs via Products → Add New → select product type "Pack"
 
 == Changelog ==
+
+= 1.1.4 =
+* License gate: product type, product data tabs, cart/order handling, AJAX, shortcode, and template auto-injection are now disabled when license is not active; admin and license tab remain accessible
 
 = 1.1.3 =
 * Updated author and plugin URI to Jezweb (jezweb.com.au)

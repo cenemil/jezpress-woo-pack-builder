@@ -3,7 +3,7 @@
  * Plugin Name: JezPress Woo Pack Builder
  * Plugin URI:  https://jezweb.com.au
  * Description: Build product packs (hampers, gift boxes, meal kits) from a WP admin UI. Custom WooCommerce product type with flexible pricing, subscription billing, and seasonal item rotation.
- * Version:     1.1.3
+ * Version:     1.1.4
  * Author:      Jezweb
  * Author URI:  https://jezweb.com.au
  * Text Domain: jezpress-woo-pack-builder
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'JWPB_VERSION', '1.1.3' );
+define( 'JWPB_VERSION', '1.1.4' );
 define( 'JWPB_DIR', plugin_dir_path( __FILE__ ) );
 define( 'JWPB_URL', plugin_dir_url( __FILE__ ) );
 
@@ -71,26 +71,32 @@ function jwpb_init() {
 		JWPB_DB::create_table();
 	}
 
-	require_once JWPB_DIR . 'includes/class-jwpb-product-pack.php';
-	require_once JWPB_DIR . 'includes/class-jwpb-product-type.php';
-	require_once JWPB_DIR . 'includes/class-jwpb-seasonal.php';
-	require_once JWPB_DIR . 'includes/class-jwpb-subscription.php';
-	require_once JWPB_DIR . 'includes/class-jwpb-cart.php';
-	require_once JWPB_DIR . 'includes/class-jwpb-order.php';
-	require_once JWPB_DIR . 'includes/class-jwpb-ajax.php';
 	require_once JWPB_DIR . 'includes/class-jwpb-admin.php';
-	require_once JWPB_DIR . 'includes/class-jwpb-shortcode.php';
 	require_once JWPB_DIR . 'includes/class-jwpb-settings.php';
 
-	JWPB_Product_Type::init();
-	JWPB_Cart::init();
-	JWPB_Order::init();
-	JWPB_Ajax::init();
-	JWPB_Shortcode::init();
-	JWPB_Settings::init();
+	$license  = JWPB_License::get_instance();
+	$licensed = $license && $license->is_valid();
+
+	if ( $licensed ) {
+		require_once JWPB_DIR . 'includes/class-jwpb-product-pack.php';
+		require_once JWPB_DIR . 'includes/class-jwpb-product-type.php';
+		require_once JWPB_DIR . 'includes/class-jwpb-seasonal.php';
+		require_once JWPB_DIR . 'includes/class-jwpb-subscription.php';
+		require_once JWPB_DIR . 'includes/class-jwpb-cart.php';
+		require_once JWPB_DIR . 'includes/class-jwpb-order.php';
+		require_once JWPB_DIR . 'includes/class-jwpb-ajax.php';
+		require_once JWPB_DIR . 'includes/class-jwpb-shortcode.php';
+
+		JWPB_Product_Type::init();
+		JWPB_Cart::init();
+		JWPB_Order::init();
+		JWPB_Ajax::init();
+		JWPB_Shortcode::init();
+		JWPB_Settings::init();
+	}
+
 	JWPB_Admin::get_instance();
 
-	$license = JWPB_License::get_instance();
 	if ( $license ) {
 		$license->init();
 	}
