@@ -29,7 +29,18 @@
 	togglePackTabs();
 
 	// -------------------------------------------------------------------------
-	// Pack Contents — product search + row management
+	// Pack type toggle — Standard / Custom sections
+	// -------------------------------------------------------------------------
+	function togglePackType() {
+		var isCustom = $('input[name="_pack_type"]:checked').val() === 'custom';
+		$('.jwpb-standard-only').toggle(!isCustom);
+		$('.jwpb-custom-only').toggle(isCustom);
+	}
+
+	$('input[name="_pack_type"]').on('change', togglePackType);
+
+	// -------------------------------------------------------------------------
+	// Pack Contents — product search + row management (standard packs)
 	// -------------------------------------------------------------------------
 
 	function initProductSearch() {
@@ -173,7 +184,147 @@
 	}
 
 	// -------------------------------------------------------------------------
-	// Form serialization — write JSON blob to hidden field before submit
+	// Custom Pack — addon product search + row management
+	// -------------------------------------------------------------------------
+
+	function initAddonProductSearch() {
+		var $search = $('#jwpb-addon-product-search');
+		if (!$search.length || typeof $.fn.select2 === 'undefined') {
+			return;
+		}
+
+		$search.select2({
+			ajax: {
+				url: jwpbData.ajaxurl,
+				dataType: 'json',
+				delay: 250,
+				data: function (params) {
+					return {
+						action:       'woocommerce_json_search_products',
+						security:     jwpbData.searchNonce,
+						term:         params.term,
+						exclude_type: 'pack'
+					};
+				},
+				processResults: function (data) {
+					var results = [];
+					$.each(data, function (id, name) {
+						results.push({ id: id, text: name });
+					});
+					return { results: results };
+				},
+				cache: true
+			},
+			minimumInputLength: 2,
+			placeholder: $search.data('placeholder') || '…'
+		});
+
+		$search.on('select2:select', function (e) {
+			var productId = e.params.data.id;
+			var $spinner  = $('#jwpb-addon-adding-spinner');
+
+			$(this).val(null).trigger('change');
+			$spinner.show();
+
+			$.post(jwpbData.ajaxurl, {
+				action:     'jwpb_get_product_info',
+				product_id: productId,
+				nonce:      jwpbData.adminNonce
+			}, function (response) {
+				$spinner.hide();
+				if (response.success) {
+					addAddonRow(response.data, 'checkbox');
+				} else {
+					window.alert(response.data.message || jwpbData.i18n.error);
+				}
+			}).fail(function () {
+				$spinner.hide();
+				window.alert(jwpbData.i18n.error);
+			});
+		});
+	}
+
+	/**
+	 * Append one row to the addon items table.
+	 *
+	 * @param {Object} item      {product_id, name, sku, type, price_html, variations[], variation_id?}
+	 * @param {string} inputType 'checkbox' or 'select' — pre-selects the input type dropdown
+	 */
+	function addAddonRow(item, inputType) {
+		var productId  = item.product_id;
+		var name       = item.name       || '';
+		var sku        = item.sku        || '';
+		var type       = item.type       || 'simple';
+		var variations = item.variations || [];
+		var varId      = parseInt(item.variation_id, 10) || 0;
+		inputType      = inputType || 'checkbox';
+
+		var variationCell;
+		var selectedVid = varId;
+
+		if (type === 'variable' && variations.length > 0) {
+			var initVid = varId || variations[0].id;
+			selectedVid = initVid;
+			var opts    = '';
+
+			$.each(variations, function (i, v) {
+				var sel = v.id === initVid;
+				opts += '<option value="' + v.id + '"' + (sel ? ' selected' : '') + '>' +
+					escHtml(v.label) + '</option>';
+			});
+
+			variationCell = '<select class="jwpb-variation-select jwpb-addon-variation-select">' + opts + '</select>';
+		} else {
+			variationCell = '<span style="color:#999;">&mdash;</span>';
+		}
+
+		var inputTypeCell =
+			'<select class="jwpb-addon-input-type">' +
+				'<option value="checkbox"' + (inputType === 'checkbox' ? ' selected' : '') + '>' +
+					escHtml(jwpbData.i18n.inputTypeCheckbox) +
+				'</option>' +
+				'<option value="select"' + (inputType === 'select' ? ' selected' : '') + '>' +
+					escHtml(jwpbData.i18n.inputTypeSelect) +
+				'</option>' +
+			'</select>';
+
+		var $tr = $(
+			'<tr class="jwpb-addon-item-row">' +
+				'<td>' +
+					'<strong>' + escHtml(name) + '</strong>' +
+					(sku ? '<br><small class="jwpb-item-sku">' + escHtml(sku) + '</small>' : '') +
+				'</td>' +
+				'<td>' + variationCell + '</td>' +
+				'<td>' + inputTypeCell + '</td>' +
+				'<td><button type="button" class="button jwpb-remove-addon" title="' +
+					escHtml(jwpbData.i18n.remove) + '">&times;</button></td>' +
+			'</tr>'
+		);
+
+		$tr.data('product-id', productId);
+		$tr.data('variation-id', selectedVid);
+
+		$('#jwpb-addon-items-tbody').append($tr);
+		toggleAddonEmptyState();
+	}
+
+	// Update data-variation-id when addon variation dropdown changes.
+	$(document).on('change', '.jwpb-addon-variation-select', function () {
+		$(this).closest('tr').data('variation-id', parseInt($(this).val(), 10) || 0);
+	});
+
+	$(document).on('click', '.jwpb-remove-addon', function () {
+		$(this).closest('tr').remove();
+		toggleAddonEmptyState();
+	});
+
+	function toggleAddonEmptyState() {
+		var hasRows = $('#jwpb-addon-items-tbody tr.jwpb-addon-item-row').length > 0;
+		$('#jwpb-addon-items-empty').toggle(!hasRows);
+	}
+
+	// -------------------------------------------------------------------------
+	// Form serialization — write JSON blobs to hidden fields before submit
 	// -------------------------------------------------------------------------
 	$('#post').on('submit', function () {
 		var items = [];
@@ -181,7 +332,7 @@
 		$('#jwpb-items-tbody tr.jwpb-item-row').each(function (i) {
 			var $row  = $(this);
 			var pid   = $row.data('product-id');
-			var $vsel = $row.find('.jwpb-variation-select');
+			var $vsel = $row.find('.jwpb-variation-select').not('.jwpb-addon-variation-select');
 			var vid   = $vsel.length ? (parseInt($vsel.val(), 10) || 0) : 0;
 			var qty   = parseInt($row.find('.jwpb-qty-input').val(), 10) || 1;
 
@@ -196,6 +347,26 @@
 		});
 
 		$('#jwpb-items-json').val(JSON.stringify(items));
+
+		var addonItems = [];
+
+		$('#jwpb-addon-items-tbody tr.jwpb-addon-item-row').each(function (i) {
+			var $row  = $(this);
+			var pid   = $row.data('product-id');
+			var vid   = $row.data('variation-id') || 0;
+			var itype = $row.find('.jwpb-addon-input-type').val() || 'checkbox';
+
+			if (pid) {
+				addonItems.push({
+					product_id:   pid,
+					variation_id: vid,
+					input_type:   itype,
+					sort_order:   i
+				});
+			}
+		});
+
+		$('#jwpb-addon-items-json').val(JSON.stringify(addonItems));
 	});
 
 	// -------------------------------------------------------------------------
@@ -296,14 +467,23 @@
 			$('#product-type').val(jwpbData.defaultType).trigger('change');
 		}
 
-		initProductSearch();
+		// Apply pack type (standard/custom) visibility state.
+		togglePackType();
 
-		// Render existing items pre-enriched server-side — no AJAX needed on load.
+		initProductSearch();
+		initAddonProductSearch();
+
+		// Render existing standard items pre-enriched server-side.
 		$.each(jwpbData.existingItems || [], function (i, item) {
 			addRow(item);
 		});
-
 		toggleEmptyState();
+
+		// Render existing addon items pre-enriched server-side.
+		$.each(jwpbData.existingAddonItems || [], function (i, item) {
+			addAddonRow(item, item.input_type || 'checkbox');
+		});
+		toggleAddonEmptyState();
 
 		if ($('#_pack_seasonal_enabled').is(':checked')) {
 			fetchPoolCount();
@@ -311,8 +491,6 @@
 
 		// Deferred: run after WooCommerce's own product-type init so our tab
 		// activation wins regardless of which script initialised first.
-		// If the page loaded as a pack product and no pack tab is yet active
-		// (General tab was active and is now hidden), activate Pack Contents.
 		setTimeout(function () {
 			if ($('#product-type').val() === 'pack' &&
 				!$('.product_data_tabs li.show_if_pack').hasClass('active')) {

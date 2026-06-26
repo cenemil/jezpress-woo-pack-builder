@@ -70,3 +70,77 @@
 	color: #767676;
 	font-style: italic;
 }
+
+/* =========================================================================
+   Custom Pack — addon selection form
+   ========================================================================= */
+
+.jwpb-addon-form {
+	margin: 1.5em 0;
+}
+
+.jwpb-addon-heading {
+	font-weight: 600;
+	margin-bottom: 0.75em;
+}
+
+.jwpb-addon-heading .required {
+	color: #cc1818;
+}
+
+.jwpb-addon-list {
+	list-style: none;
+	margin: 0 0 1em;
+	padding: 0;
+}
+
+.jwpb-addon-item {
+	padding: 10px 0;
+	border-bottom: 1px solid #ececec;
+}
+
+.jwpb-addon-item:last-child {
+	border-bottom: none;
+}
+
+.jwpb-addon-label {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	cursor: pointer;
+	font-weight: normal;
+}
+
+.jwpb-addon-label input[type="checkbox"] {
+	margin: 0;
+	flex-shrink: 0;
+}
+
+.jwpb-addon-name {
+	flex: 1;
+}
+
+.jwpb-addon-price {
+	color: #444;
+	font-weight: 500;
+	white-space: nowrap;
+}
+
+.jwpb-addon-qty {
+	width: 70px !important;
+	text-align: center;
+}
+
+.jwpb-addon-total-row {
+	margin: 1em 0 0.5em;
+	font-size: 1.05em;
+	text-align: right;
+	padding-top: 0.5em;
+	border-top: 2px solid #e0e0e0;
+}
+
+.jwpb-addon-error {
+	color: #cc1818;
+	font-size: 0.9em;
+	margin-top: 0.5em;
+}

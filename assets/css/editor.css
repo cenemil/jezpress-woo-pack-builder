@@ -70,3 +70,37 @@
 	font-size: 0.85em;
 	color: #646970;
 }
+
+/* Pack type radio row */
+.jwpb-pack-type-radios label {
+	margin-right: 16px;
+	cursor: pointer;
+}
+
+/* Addon items table */
+.jwpb-addon-items-table {
+	border-collapse: separate;
+	margin-top: 8px;
+	margin-bottom: 8px;
+}
+
+.jwpb-addon-items-table th,
+.jwpb-addon-items-table td {
+	padding: 8px 10px;
+	vertical-align: middle;
+	border-bottom: 1px solid #f0f0f1;
+}
+
+.jwpb-addon-items-table thead th {
+	background: #f6f7f7;
+	font-weight: 600;
+	color: #3c434a;
+}
+
+.jwpb-addon-items-table tbody tr:hover {
+	background: #f6f7f7;
+}
+
+.jwpb-addon-input-type {
+	min-width: 140px;
+}

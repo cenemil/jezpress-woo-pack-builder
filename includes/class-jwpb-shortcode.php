@@ -22,6 +22,7 @@ class JWPB_Shortcode {
 
 	public static function init() {
 		add_shortcode( 'jwpb_pack_contents', array( __CLASS__, 'render' ) );
+		add_action( 'woocommerce_before_add_to_cart_button', array( __CLASS__, 'render_addon_form' ) );
 	}
 
 	/**
@@ -172,6 +173,148 @@ class JWPB_Shortcode {
 		} );
 
 		return empty( $query_args ) ? $base : add_query_arg( $query_args, $base );
+	}
+
+	/**
+	 * Render the addon selection form for custom packs.
+	 * Hooked into woocommerce_before_add_to_cart_button — fires inside <form class="cart">.
+	 *
+	 * @return void
+	 */
+	public static function render_addon_form() {
+		global $product;
+
+		if ( ! ( $product instanceof WC_Product_Pack ) || ! $product->is_custom() ) {
+			return;
+		}
+
+		$addon_items = $product->get_addon_items();
+		if ( empty( $addon_items ) ) {
+			return;
+		}
+
+		wp_enqueue_style(
+			'jwpb-pack-shortcode',
+			JWPB_URL . 'assets/css/shortcode.css',
+			array(),
+			JWPB_VERSION
+		);
+
+		wp_enqueue_script(
+			'jwpb-pack-frontend',
+			JWPB_URL . 'assets/js/frontend.js',
+			array( 'jquery' ),
+			JWPB_VERSION,
+			true
+		);
+
+		wp_localize_script( 'jwpb-pack-frontend', 'jwpbFrontend', array(
+			'addonSumMode' => 'sum' === $product->get_pack_pricing_mode() ? 1 : 0,
+			'currency'     => get_woocommerce_currency_symbol(),
+			'i18n'         => array(
+				'selectAtLeastOne' => __( 'Please select at least one item.', 'jezpress-woo-pack-builder' ),
+			),
+		) );
+
+		// Build display rows from addon item DB data.
+		$rows = array();
+
+		foreach ( $addon_items as $item ) {
+			$product_id   = (int) $item['product_id'];
+			$variation_id = (int) $item['variation_id'];
+			$input_type   = $item['input_type'];
+
+			$parent = wc_get_product( $product_id );
+			if ( ! $parent ) {
+				continue;
+			}
+
+			if ( $variation_id ) {
+				$variation = wc_get_product( $variation_id );
+				if ( $variation instanceof WC_Product_Variation ) {
+					$display_product = $variation;
+					$var_label       = self::variation_label( $variation );
+				} else {
+					$display_product = $parent;
+					$var_label       = '';
+				}
+			} else {
+				$display_product = $parent;
+				$var_label       = '';
+			}
+
+			$rows[] = array(
+				'field_key'  => $product_id . '_' . $variation_id,
+				'name'       => $parent->get_name(),
+				'var_label'  => $var_label,
+				'price_html' => $display_product->get_price_html(),
+				'price_raw'  => (float) $display_product->get_price(),
+				'input_type' => $input_type,
+			);
+		}
+
+		if ( empty( $rows ) ) {
+			return;
+		}
+
+		$is_sum_mode = 'sum' === $product->get_pack_pricing_mode();
+
+		ob_start();
+		?>
+		<div class="jwpb-addon-form" id="jwpb-addon-form">
+			<p class="jwpb-addon-heading">
+				<?php esc_html_e( 'Select your items:', 'jezpress-woo-pack-builder' ); ?>
+				<span class="required">*</span>
+			</p>
+			<ul class="jwpb-addon-list">
+				<?php foreach ( $rows as $row ) : ?>
+				<li class="jwpb-addon-item" data-price="<?php echo esc_attr( $row['price_raw'] ); ?>">
+					<?php if ( 'checkbox' === $row['input_type'] ) : ?>
+					<label class="jwpb-addon-label">
+						<input type="checkbox"
+							name="jwpb_addon_sel[<?php echo esc_attr( $row['field_key'] ); ?>]"
+							value="1"
+							class="jwpb-addon-checkbox">
+						<span class="jwpb-addon-name">
+							<?php echo esc_html( $row['name'] ); ?>
+							<?php if ( $row['var_label'] ) : ?>
+								<span class="jwpb-variation-label"><?php echo esc_html( $row['var_label'] ); ?></span>
+							<?php endif; ?>
+						</span>
+						<span class="jwpb-addon-price"><?php echo wp_kses_post( $row['price_html'] ); ?></span>
+					</label>
+					<?php else : ?>
+					<label class="jwpb-addon-label">
+						<span class="jwpb-addon-name">
+							<?php echo esc_html( $row['name'] ); ?>
+							<?php if ( $row['var_label'] ) : ?>
+								<span class="jwpb-variation-label"><?php echo esc_html( $row['var_label'] ); ?></span>
+							<?php endif; ?>
+						</span>
+						<span class="jwpb-addon-price"><?php echo wp_kses_post( $row['price_html'] ); ?></span>
+						<input type="number"
+							name="jwpb_addon_sel[<?php echo esc_attr( $row['field_key'] ); ?>]"
+							value="0"
+							min="0"
+							step="1"
+							class="jwpb-addon-qty input-text qty">
+					</label>
+					<?php endif; ?>
+				</li>
+				<?php endforeach; ?>
+			</ul>
+			<?php if ( $is_sum_mode ) : ?>
+			<div class="jwpb-addon-total-row" id="jwpb-addon-total-row" style="display:none;">
+				<strong><?php esc_html_e( 'Subtotal:', 'jezpress-woo-pack-builder' ); ?></strong>
+				<span id="jwpb-addon-total"></span>
+			</div>
+			<?php endif; ?>
+			<div class="jwpb-addon-error" id="jwpb-addon-error" style="display:none;">
+				<?php esc_html_e( 'Please select at least one item.', 'jezpress-woo-pack-builder' ); ?>
+			</div>
+		</div>
+		<?php
+		echo ob_get_clean(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 	}
 
 	/**

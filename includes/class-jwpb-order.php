@@ -40,9 +40,13 @@ class JWPB_Order {
 			return;
 		}
 
-		$raw_items = isset( $values['_jwpb_snapshot'] )
-			? $values['_jwpb_snapshot']
-			: $product->get_pack_items();
+		if ( $product->is_custom() ) {
+			$raw_items = $values['_jwpb_addon_selections'] ?? array();
+		} elseif ( isset( $values['_jwpb_snapshot'] ) ) {
+			$raw_items = $values['_jwpb_snapshot'];
+		} else {
+			$raw_items = $product->get_pack_items();
+		}
 
 		if ( empty( $raw_items ) ) {
 			return;

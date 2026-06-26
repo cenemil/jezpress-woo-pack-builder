@@ -4,7 +4,8 @@
  * product data tabs, panel HTML, meta save, and admin script enqueuing.
  *
  * Pack items are persisted to {prefix}jwpb_pack_items via JWPB_DB.
- * The form submits a JSON blob (_pack_items_json) which save_meta() parses.
+ * The form submits JSON blobs (_pack_items_json and _pack_addon_items_json)
+ * which save_meta() parses.
  *
  * @package JezPress_Woo_Pack_Builder
  * @since   1.0.0
@@ -47,9 +48,7 @@ class JWPB_Product_Type {
 	// -------------------------------------------------------------------------
 
 	public static function add_product_data_tabs( $tabs ) {
-		// WooCommerce's General tab has no fields relevant to pack products
-		// (price and virtual/downloadable are all show_if_simple/show_if_external).
-		// Adding hide_if_pack here lets WooCommerce's own JS hide it on type change.
+		// WooCommerce's General tab has no fields relevant to pack products.
 		if ( isset( $tabs['general'] ) ) {
 			$tabs['general']['class'][] = 'hide_if_pack';
 		}
@@ -78,20 +77,51 @@ class JWPB_Product_Type {
 
 		$is_pack = $product_object instanceof WC_Product_Pack;
 
+		$pack_type        = $is_pack ? $product_object->get_pack_type( 'edit' )                 : 'standard';
 		$pricing_mode     = $is_pack ? $product_object->get_pack_pricing_mode( 'edit' )          : 'sum';
-		$price_override   = $is_pack ? $product_object->get_pack_price_override( 'edit' )         : '';
-		$sub_enabled      = $is_pack ? $product_object->get_pack_subscription_enabled( 'edit' )   : 'no';
-		$sub_interval     = $is_pack ? $product_object->get_pack_subscription_interval( 'edit' )  : 1;
-		$sub_period       = $is_pack ? $product_object->get_pack_subscription_period( 'edit' )    : 'month';
-		$sub_length       = $is_pack ? $product_object->get_pack_subscription_length( 'edit' )    : 0;
-		$seasonal_enabled = $is_pack ? $product_object->get_pack_seasonal_enabled( 'edit' )       : 'no';
-		$seasonal_count   = $is_pack ? $product_object->get_pack_seasonal_count( 'edit' )         : 3;
-		$last_rotated     = $is_pack ? $product_object->get_pack_seasonal_last_rotated( 'edit' )  : '';
-		$pack_id          = $is_pack ? $product_object->get_id()                                  : 0;
+		$price_override   = $is_pack ? $product_object->get_pack_price_override( 'edit' )        : '';
+		$sub_enabled      = $is_pack ? $product_object->get_pack_subscription_enabled( 'edit' )  : 'no';
+		$sub_interval     = $is_pack ? $product_object->get_pack_subscription_interval( 'edit' ) : 1;
+		$sub_period       = $is_pack ? $product_object->get_pack_subscription_period( 'edit' )   : 'month';
+		$sub_length       = $is_pack ? $product_object->get_pack_subscription_length( 'edit' )   : 0;
+		$seasonal_enabled = $is_pack ? $product_object->get_pack_seasonal_enabled( 'edit' )      : 'no';
+		$seasonal_count   = $is_pack ? $product_object->get_pack_seasonal_count( 'edit' )        : 3;
+		$last_rotated     = $is_pack ? $product_object->get_pack_seasonal_last_rotated( 'edit' ) : '';
+		$pack_id          = $is_pack ? $product_object->get_id()                                 : 0;
+
+		$is_custom = ( 'custom' === $pack_type );
 		?>
 
 		<!-- PACK CONTENTS -->
 		<div id="jwpb_contents_data" class="panel woocommerce_options_panel">
+
+			<!-- Pack Type — always visible -->
+			<div class="options_group">
+				<p class="form-field jwpb-pack-type-radios">
+					<label><?php esc_html_e( 'Pack Type', 'jezpress-woo-pack-builder' ); ?></label>
+					<span style="display:inline-block; line-height:2;">
+						<span style="padding-right:16px;">
+							<input type="radio" name="_pack_type" value="standard" id="_pack_type_standard"
+								<?php checked( $pack_type, 'standard' ); ?>>
+							<label for="_pack_type_standard" style="display:inline; font-weight:normal; cursor:pointer;">
+								<?php esc_html_e( 'Standard', 'jezpress-woo-pack-builder' ); ?>
+							</label>
+						</span>
+						<span>
+							<input type="radio" name="_pack_type" value="custom" id="_pack_type_custom"
+								<?php checked( $pack_type, 'custom' ); ?>>
+							<label for="_pack_type_custom" style="display:inline; font-weight:normal; cursor:pointer;">
+								<?php esc_html_e( 'Custom', 'jezpress-woo-pack-builder' ); ?>
+							</label>
+						</span>
+					</span>
+					<span class="description">
+						<?php esc_html_e( 'Standard: fixed items for all customers. Custom: customers select from available options at checkout.', 'jezpress-woo-pack-builder' ); ?>
+					</span>
+				</p>
+			</div>
+
+			<!-- Pricing + labels — always visible -->
 			<div class="options_group">
 
 				<p class="form-field">
@@ -136,7 +166,8 @@ class JWPB_Product_Type {
 
 			</div>
 
-			<div class="options_group">
+			<!-- Seasonal rotation — standard packs only -->
+			<div class="options_group jwpb-standard-only" style="<?php echo $is_custom ? 'display:none;' : ''; ?>">
 
 				<p class="form-field">
 					<label for="_pack_seasonal_enabled"><?php esc_html_e( 'Seasonal Rotation', 'jezpress-woo-pack-builder' ); ?></label>
@@ -182,7 +213,8 @@ class JWPB_Product_Type {
 
 			</div>
 
-			<div class="options_group">
+			<!-- Standard items — standard packs only -->
+			<div class="options_group jwpb-standard-only" style="<?php echo $is_custom ? 'display:none;' : ''; ?>">
 
 				<p class="form-field">
 					<label for="jwpb-product-search"><?php esc_html_e( 'Add Product', 'jezpress-woo-pack-builder' ); ?></label>
@@ -220,10 +252,52 @@ class JWPB_Product_Type {
 					</table>
 				</div>
 
-				<?php /* Hidden field — JS writes JSON here before form submit */ ?>
 				<input type="hidden" id="jwpb-items-json" name="_pack_items_json" value="[]">
 
 			</div>
+
+			<!-- Custom addon items — custom packs only -->
+			<div class="options_group jwpb-custom-only" style="<?php echo ! $is_custom ? 'display:none;' : ''; ?>">
+
+				<p class="form-field" style="margin-bottom:4px;">
+					<label for="jwpb-addon-product-search"><?php esc_html_e( 'Add Addon Product', 'jezpress-woo-pack-builder' ); ?></label>
+					<select id="jwpb-addon-product-search" class="jwpb-product-search"
+						style="min-width:300px; max-width:60%;"
+						data-placeholder="<?php esc_attr_e( 'Search for a product…', 'jezpress-woo-pack-builder' ); ?>">
+					</select>
+					<span id="jwpb-addon-adding-spinner" class="spinner" style="float:none; margin:4px 6px; display:none; visibility:visible;"></span>
+				</p>
+
+				<div style="margin: 4px 12px 8px 12px;">
+					<p class="description" style="margin: 0 0 8px;">
+						<?php esc_html_e( 'Add products customers can choose from. Each customer must select at least one. Set the input type to control how they choose a quantity.', 'jezpress-woo-pack-builder' ); ?>
+					</p>
+					<table id="jwpb-addon-items-table" class="jwpb-addon-items-table widefat">
+						<thead>
+							<tr>
+								<th><?php esc_html_e( 'Product', 'jezpress-woo-pack-builder' ); ?></th>
+								<th><?php esc_html_e( 'Variation', 'jezpress-woo-pack-builder' ); ?></th>
+								<th style="width:160px;"><?php esc_html_e( 'Input Type', 'jezpress-woo-pack-builder' ); ?></th>
+								<th style="width:40px;"></th>
+							</tr>
+						</thead>
+						<tbody id="jwpb-addon-items-tbody">
+							<!-- Rows rendered by editor.js from jwpbData.existingAddonItems -->
+						</tbody>
+						<tfoot id="jwpb-addon-items-empty" style="display:none;">
+							<tr>
+								<td colspan="4" style="color:#999; font-style:italic; text-align:center; padding:12px;">
+									<?php esc_html_e( 'No addon products added yet. Search above to add products.', 'jezpress-woo-pack-builder' ); ?>
+								</td>
+							</tr>
+						</tfoot>
+					</table>
+				</div>
+
+				<input type="hidden" id="jwpb-addon-items-json" name="_pack_addon_items_json" value="[]">
+
+			</div>
+
 		</div>
 
 		<!-- SUBSCRIPTION -->
@@ -283,11 +357,17 @@ class JWPB_Product_Type {
 			return;
 		}
 
-		// --- Pack items (from JSON blob written by JS) ---
-		$json = isset( $_POST['_pack_items_json'] )
+		// --- Pack type ---
+		$pack_type = sanitize_key( $_POST['_pack_type'] ?? 'standard' );
+		if ( ! in_array( $pack_type, array( 'standard', 'custom' ), true ) ) {
+			$pack_type = 'standard';
+		}
+		update_post_meta( $post_id, '_pack_type', $pack_type );
+
+		// --- Standard pack items (from JSON blob written by JS) ---
+		$json      = isset( $_POST['_pack_items_json'] )
 			? sanitize_text_field( wp_unslash( $_POST['_pack_items_json'] ) )
 			: '[]';
-
 		$raw_items = json_decode( $json, true );
 		$items     = array();
 
@@ -301,13 +381,11 @@ class JWPB_Product_Type {
 					continue;
 				}
 
-				// Validate parent product exists and is not itself a pack.
 				$p = wc_get_product( $product_id );
 				if ( ! $p || 'pack' === $p->get_type() ) {
 					continue;
 				}
 
-				// Validate variation belongs to this parent (if specified).
 				if ( $variation_id ) {
 					$v = wc_get_product( $variation_id );
 					if ( ! ( $v instanceof WC_Product_Variation ) || $v->get_parent_id() !== $product_id ) {
@@ -324,6 +402,48 @@ class JWPB_Product_Type {
 		}
 
 		JWPB_DB::save_pack_items( $post_id, $items );
+
+		// --- Addon items (from JSON blob written by JS) ---
+		$addon_json      = isset( $_POST['_pack_addon_items_json'] )
+			? sanitize_text_field( wp_unslash( $_POST['_pack_addon_items_json'] ) )
+			: '[]';
+		$raw_addon_items = json_decode( $addon_json, true );
+		$addon_items     = array();
+
+		if ( is_array( $raw_addon_items ) ) {
+			foreach ( $raw_addon_items as $entry ) {
+				$product_id   = absint( $entry['product_id'] ?? 0 );
+				$variation_id = absint( $entry['variation_id'] ?? 0 );
+				$input_type   = sanitize_key( $entry['input_type'] ?? 'checkbox' );
+
+				if ( ! $product_id ) {
+					continue;
+				}
+				if ( ! in_array( $input_type, array( 'checkbox', 'select' ), true ) ) {
+					$input_type = 'checkbox';
+				}
+
+				$p = wc_get_product( $product_id );
+				if ( ! $p || 'pack' === $p->get_type() ) {
+					continue;
+				}
+
+				if ( $variation_id ) {
+					$v = wc_get_product( $variation_id );
+					if ( ! ( $v instanceof WC_Product_Variation ) || $v->get_parent_id() !== $product_id ) {
+						$variation_id = 0;
+					}
+				}
+
+				$addon_items[] = array(
+					'product_id'   => $product_id,
+					'variation_id' => $variation_id,
+					'input_type'   => $input_type,
+				);
+			}
+		}
+
+		JWPB_DB::save_addon_items( $post_id, $addon_items );
 
 		// --- Column labels ---
 		update_post_meta( $post_id, '_pack_item_label', sanitize_text_field( wp_unslash( $_POST['_pack_item_label'] ?? '' ) ) );
@@ -342,15 +462,19 @@ class JWPB_Product_Type {
 			update_post_meta( $post_id, '_price', $override );
 			update_post_meta( $post_id, '_regular_price', $override );
 		} else {
-			// Compute sum and update WC price index.
-			$total = 0.0;
-			foreach ( $items as $item ) {
-				$target_id = $item['variation_id'] ?: $item['product_id'];
+			// Compute sum price using the appropriate item set.
+			$price_items = ( 'custom' === $pack_type ) ? $addon_items : $items;
+			$total       = 0.0;
+
+			foreach ( $price_items as $item ) {
+				$qty       = isset( $item['quantity'] ) ? max( 1, (int) $item['quantity'] ) : 1;
+				$target_id = ( ! empty( $item['variation_id'] ) ) ? $item['variation_id'] : $item['product_id'];
 				$p         = wc_get_product( $target_id );
 				if ( $p ) {
-					$total += (float) $p->get_price() * $item['quantity'];
+					$total += (float) $p->get_price() * $qty;
 				}
 			}
+
 			$total_str = wc_format_decimal( $total );
 			update_post_meta( $post_id, '_pack_price_override', '' );
 			update_post_meta( $post_id, '_price', $total_str );
@@ -402,18 +526,21 @@ class JWPB_Product_Type {
 			true
 		);
 
-		// Pre-fetch existing items from DB and enrich with product data for
-		// JS to render immediately on load without extra AJAX calls.
+		$product        = wc_get_product( $post->ID );
+		$pack_type      = ( $product instanceof WC_Product_Pack ) ? $product->get_pack_type( 'edit' ) : 'standard';
 		$existing_items = self::get_enriched_items( $post->ID );
+		$existing_addon = self::get_enriched_addon_items( $post->ID );
 
 		wp_localize_script( 'jwpb-pack-editor', 'jwpbData', array(
-			'ajaxurl'       => admin_url( 'admin-ajax.php' ),
-			'currency'      => get_woocommerce_currency_symbol(),
-			'adminNonce'    => wp_create_nonce( 'jwpb_admin_nonce' ),
-			'searchNonce'   => wp_create_nonce( 'search-products' ),
-			'existingItems' => $existing_items,
-			'defaultType'   => isset( $_GET['jwpb_type'] ) ? sanitize_key( $_GET['jwpb_type'] ) : '',
-			'i18n'          => array(
+			'ajaxurl'            => admin_url( 'admin-ajax.php' ),
+			'currency'           => get_woocommerce_currency_symbol(),
+			'adminNonce'         => wp_create_nonce( 'jwpb_admin_nonce' ),
+			'searchNonce'        => wp_create_nonce( 'search-products' ),
+			'existingItems'      => $existing_items,
+			'existingAddonItems' => $existing_addon,
+			'packType'           => $pack_type,
+			'defaultType'        => isset( $_GET['jwpb_type'] ) ? sanitize_key( $_GET['jwpb_type'] ) : '',
+			'i18n'               => array(
 				'remove'           => __( 'Remove', 'jezpress-woo-pack-builder' ),
 				'selectVariation'  => __( 'Select variation…', 'jezpress-woo-pack-builder' ),
 				'anyVariation'     => __( 'Any', 'jezpress-woo-pack-builder' ),
@@ -422,12 +549,14 @@ class JWPB_Product_Type {
 				'error'            => __( 'An error occurred. Please try again.', 'jezpress-woo-pack-builder' ),
 				'loading'          => __( 'Loading…', 'jezpress-woo-pack-builder' ),
 				'noItems'          => __( 'No products added yet.', 'jezpress-woo-pack-builder' ),
+				'inputTypeCheckbox' => __( 'Checkbox (qty 1)', 'jezpress-woo-pack-builder' ),
+				'inputTypeSelect'   => __( 'Number (qty input)', 'jezpress-woo-pack-builder' ),
 			),
 		) );
 	}
 
 	/**
-	 * Fetch DB items for a product and enrich with product/variation display data.
+	 * Fetch DB standard items and enrich with product/variation display data.
 	 *
 	 * @param int $product_id Product post ID.
 	 * @return array[]
@@ -453,7 +582,6 @@ class JWPB_Product_Type {
 				'variations'   => array(),
 			);
 
-			// Build variation list for variable products.
 			if ( $parent->is_type( 'variable' ) ) {
 				foreach ( $parent->get_available_variations() as $var ) {
 					$v = wc_get_product( $var['variation_id'] );
@@ -461,20 +589,7 @@ class JWPB_Product_Type {
 						continue;
 					}
 
-					$attrs = array();
-					foreach ( $var['attributes'] as $attr_key => $attr_value ) {
-						if ( '' === $attr_value ) {
-							$attrs[] = __( 'Any', 'jezpress-woo-pack-builder' );
-							continue;
-						}
-						$taxonomy = str_replace( 'attribute_', '', $attr_key );
-						if ( taxonomy_exists( $taxonomy ) ) {
-							$term    = get_term_by( 'slug', $attr_value, $taxonomy );
-							$attrs[] = $term ? $term->name : $attr_value;
-						} else {
-							$attrs[] = $attr_value;
-						}
-					}
+					$attrs = self::resolve_variation_attrs( $var['attributes'] );
 
 					$row['variations'][] = array(
 						'id'         => $var['variation_id'],
@@ -484,7 +599,6 @@ class JWPB_Product_Type {
 					);
 				}
 
-				// If a variation is already selected, override price_html with that variation's price.
 				if ( $item['variation_id'] ) {
 					$selected_v = wc_get_product( $item['variation_id'] );
 					if ( $selected_v ) {
@@ -497,5 +611,87 @@ class JWPB_Product_Type {
 		}
 
 		return $enriched;
+	}
+
+	/**
+	 * Fetch DB addon items and enrich with product/variation display data.
+	 *
+	 * @param int $product_id Product post ID.
+	 * @return array[]
+	 */
+	private static function get_enriched_addon_items( $product_id ) {
+		$db_items = JWPB_DB::get_addon_items( $product_id );
+		$enriched = array();
+
+		foreach ( $db_items as $item ) {
+			$parent = wc_get_product( $item['product_id'] );
+			if ( ! $parent ) {
+				continue;
+			}
+
+			$row = array(
+				'product_id'   => $item['product_id'],
+				'variation_id' => $item['variation_id'],
+				'input_type'   => $item['input_type'],
+				'name'         => $parent->get_name(),
+				'sku'          => $parent->get_sku(),
+				'type'         => $parent->get_type(),
+				'price_html'   => $parent->get_price_html(),
+				'variations'   => array(),
+			);
+
+			if ( $parent->is_type( 'variable' ) ) {
+				foreach ( $parent->get_available_variations() as $var ) {
+					$v = wc_get_product( $var['variation_id'] );
+					if ( ! $v ) {
+						continue;
+					}
+
+					$attrs = self::resolve_variation_attrs( $var['attributes'] );
+
+					$row['variations'][] = array(
+						'id'         => $var['variation_id'],
+						'label'      => implode( ' / ', $attrs ) ?: ( '#' . $var['variation_id'] ),
+						'price_html' => $v->get_price_html(),
+						'sku'        => $v->get_sku(),
+					);
+				}
+
+				if ( $item['variation_id'] ) {
+					$selected_v = wc_get_product( $item['variation_id'] );
+					if ( $selected_v ) {
+						$row['price_html'] = $selected_v->get_price_html();
+					}
+				}
+			}
+
+			$enriched[] = $row;
+		}
+
+		return $enriched;
+	}
+
+	/**
+	 * Resolve raw variation attribute slugs to human-readable labels.
+	 *
+	 * @param array $attributes  Raw attribute key => value pairs from get_available_variations().
+	 * @return string[]
+	 */
+	private static function resolve_variation_attrs( array $attributes ) {
+		$attrs = array();
+		foreach ( $attributes as $attr_key => $attr_value ) {
+			if ( '' === $attr_value ) {
+				$attrs[] = __( 'Any', 'jezpress-woo-pack-builder' );
+				continue;
+			}
+			$taxonomy = str_replace( 'attribute_', '', $attr_key );
+			if ( taxonomy_exists( $taxonomy ) ) {
+				$term    = get_term_by( 'slug', $attr_value, $taxonomy );
+				$attrs[] = $term ? $term->name : $attr_value;
+			} else {
+				$attrs[] = $attr_value;
+			}
+		}
+		return $attrs;
 	}
 }

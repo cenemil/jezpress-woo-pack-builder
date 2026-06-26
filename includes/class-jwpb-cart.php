@@ -15,30 +15,123 @@ if ( ! defined( 'ABSPATH' ) ) {
 class JWPB_Cart {
 
 	public static function init() {
-		add_filter( 'woocommerce_add_cart_item_data',      array( __CLASS__, 'snapshot_seasonal_items' ), 10, 2 );
+		add_filter( 'woocommerce_add_cart_item_data',      array( __CLASS__, 'enrich_cart_item_data' ), 10, 2 );
+		add_filter( 'woocommerce_add_to_cart_validation',  array( __CLASS__, 'validate_custom_pack' ), 10, 2 );
 		add_action( 'woocommerce_before_calculate_totals', array( __CLASS__, 'set_pack_price' ), 10, 1 );
 		add_filter( 'woocommerce_cart_item_name',          array( __CLASS__, 'append_contents_summary' ), 10, 3 );
 		add_filter( 'woocommerce_add_to_cart_validation',  array( __CLASS__, 'apply_subscription_to_cart' ), 10, 2 );
 	}
 
 	/**
-	 * For seasonal packs: snapshot current pack items so a mid-session rotation
-	 * doesn't change what the customer sees.
+	 * Enrich cart item data for pack products:
+	 *   - Standard seasonal packs: snapshot current items to prevent mid-session rotation changes.
+	 *   - Custom packs: capture customer's addon selections from POST data.
 	 *
 	 * @param array $cart_item_data Existing cart item data.
 	 * @param int   $product_id     Product being added.
 	 * @return array
 	 */
-	public static function snapshot_seasonal_items( $cart_item_data, $product_id ) {
+	public static function enrich_cart_item_data( $cart_item_data, $product_id ) {
 		$product = wc_get_product( $product_id );
 
-		if ( ! ( $product instanceof WC_Product_Pack ) || ! $product->is_seasonal() ) {
+		if ( ! ( $product instanceof WC_Product_Pack ) ) {
 			return $cart_item_data;
 		}
 
-		$cart_item_data['_jwpb_snapshot'] = $product->get_pack_items();
+		if ( $product->is_seasonal() && ! $product->is_custom() ) {
+			$cart_item_data['_jwpb_snapshot'] = $product->get_pack_items();
+		}
+
+		if ( $product->is_custom() ) {
+			$cart_item_data['_jwpb_addon_selections'] = self::parse_addon_selections( $product );
+		}
 
 		return $cart_item_data;
+	}
+
+	/**
+	 * Validate that a custom pack has at least one addon item selected.
+	 *
+	 * @param bool $passed     Whether validation passed so far.
+	 * @param int  $product_id Product being added.
+	 * @return bool
+	 */
+	public static function validate_custom_pack( $passed, $product_id ) {
+		if ( ! $passed ) {
+			return false;
+		}
+
+		$product = wc_get_product( $product_id );
+
+		if ( ! ( $product instanceof WC_Product_Pack ) || ! $product->is_custom() ) {
+			return $passed;
+		}
+
+		$selections = self::parse_addon_selections( $product );
+
+		if ( empty( $selections ) ) {
+			wc_add_notice(
+				__( 'Please select at least one item before adding this pack to your cart.', 'jezpress-woo-pack-builder' ),
+				'error'
+			);
+			return false;
+		}
+
+		return $passed;
+	}
+
+	/**
+	 * Parse and validate addon selections from POST data.
+	 *
+	 * Validates that each submitted key matches an admin-configured addon item
+	 * for this pack, preventing customers from injecting arbitrary product IDs.
+	 *
+	 * @param WC_Product_Pack $product The pack product.
+	 * @return array[] Validated selections: [{product_id, variation_id, quantity}]
+	 */
+	private static function parse_addon_selections( WC_Product_Pack $product ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing
+		$raw = isset( $_POST['jwpb_addon_sel'] ) && is_array( $_POST['jwpb_addon_sel'] )
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing
+			? $_POST['jwpb_addon_sel']
+			: array();
+
+		if ( empty( $raw ) ) {
+			return array();
+		}
+
+		// Build a lookup of admin-configured addon items keyed by "{product_id}_{variation_id}".
+		$addon_map = array();
+		foreach ( $product->get_addon_items() as $item ) {
+			$key               = $item['product_id'] . '_' . $item['variation_id'];
+			$addon_map[ $key ] = $item;
+		}
+
+		$selections = array();
+
+		foreach ( $raw as $key => $qty_raw ) {
+			if ( ! preg_match( '/^\d+_\d+$/', $key ) ) {
+				continue;
+			}
+			if ( ! isset( $addon_map[ $key ] ) ) {
+				continue;
+			}
+
+			$qty = absint( $qty_raw );
+			if ( $qty < 1 ) {
+				continue;
+			}
+
+			list( $product_id, $variation_id ) = array_map( 'intval', explode( '_', $key, 2 ) );
+
+			$selections[] = array(
+				'product_id'   => $product_id,
+				'variation_id' => $variation_id,
+				'quantity'     => $qty,
+			);
+		}
+
+		return $selections;
 	}
 
 	/**
@@ -60,9 +153,13 @@ class JWPB_Cart {
 				continue;
 			}
 
-			$items = isset( $cart_item['_jwpb_snapshot'] )
-				? $cart_item['_jwpb_snapshot']
-				: $product->get_pack_items();
+			if ( $product->is_custom() ) {
+				$items = $cart_item['_jwpb_addon_selections'] ?? array();
+			} elseif ( isset( $cart_item['_jwpb_snapshot'] ) ) {
+				$items = $cart_item['_jwpb_snapshot'];
+			} else {
+				$items = $product->get_pack_items();
+			}
 
 			$total = 0.0;
 			foreach ( $items as $item ) {
@@ -94,9 +191,13 @@ class JWPB_Cart {
 			return $name;
 		}
 
-		$items = isset( $cart_item['_jwpb_snapshot'] )
-			? $cart_item['_jwpb_snapshot']
-			: $product->get_pack_items();
+		if ( $product->is_custom() ) {
+			$items = $cart_item['_jwpb_addon_selections'] ?? array();
+		} elseif ( isset( $cart_item['_jwpb_snapshot'] ) ) {
+			$items = $cart_item['_jwpb_snapshot'];
+		} else {
+			$items = $product->get_pack_items();
+		}
 
 		if ( empty( $items ) ) {
 			return $name;
