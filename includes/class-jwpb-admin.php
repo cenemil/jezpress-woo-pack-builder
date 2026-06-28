@@ -178,6 +178,21 @@ class JWPB_Admin {
 								</p>
 							</td>
 						</tr>
+
+						<tr>
+							<th scope="row">
+								<label for="shipping_weight_debug">
+									<?php esc_html_e( 'Shipping Weight Debug', 'jezpress-woo-pack-builder' ); ?>
+								</label>
+							</th>
+							<td>
+								<label>
+									<input type="checkbox" id="shipping_weight_debug" name="shipping_weight_debug" value="1"
+										<?php checked( JWPB_Settings::get( 'shipping_weight_debug', false ) ); ?>>
+									<?php esc_html_e( 'Show a weight breakdown panel on cart and checkout pages for pack products.', 'jezpress-woo-pack-builder' ); ?>
+								</label>
+							</td>
+						</tr>
 					</table>
 
 					<p class="submit">

@@ -37,11 +37,18 @@ Pure PHP plugin — no Composer, npm, or build scripts. No compilation required.
 | `includes/class-jwpb-license.php` | `JWPB_License` | Singleton; full license lifecycle |
 | `includes/class-jwpb-updater.php` | `JWPB_Updater` | Hooks into WP update transients to pull updates from JezPress update server |
 
+### Pack Types
+
+Two mutually exclusive modes controlled by `_pack_type` postmeta:
+
+- **Standard** — admin defines fixed bundled items; all customers get the same contents. Supports pricing mode (sum-of-items or fixed override), column label overrides, and seasonal rotation.
+- **Custom** — admin defines a pool of selectable addon products; customers choose from them at checkout. Uses the WooCommerce **General tab** for base price (regular + sale), so pricing, column labels, and seasonal rotation settings are hidden (standard-only). Cart price = WC base price + sum of customer-selected addon prices.
+
 ### Data Model
 
-#### DB table: `{prefix}jwpb_pack_items`
+#### DB table: `{prefix}jwpb_pack_items` (schema version 2)
 
-Managed by `JWPB_DB`. Created on activation, dropped on uninstall (product postmeta is intentionally left intact on uninstall so orders are not broken).
+Managed by `JWPB_DB`. Created on activation, dropped on uninstall (product postmeta is intentionally left intact on uninstall so orders are not broken). `TABLE_VERSION = 2` stored in option `jwpb_db_version`; `needs_upgrade()` triggers `create_table()` on boot if behind.
 
 | Column | Type | Notes |
 |---|---|---|
@@ -49,24 +56,27 @@ Managed by `JWPB_DB`. Created on activation, dropped on uninstall (product postm
 | `pack_id` | bigint UNSIGNED | Indexed; WP post ID of the pack product |
 | `product_id` | bigint UNSIGNED | |
 | `variation_id` | bigint UNSIGNED | 0 for non-variable products |
-| `quantity` | int UNSIGNED | |
+| `quantity` | int UNSIGNED | 0 for addon rows |
 | `sort_order` | int UNSIGNED | Set from row index on save |
+| `item_role` | varchar(20) | `'standard'` (fixed items) or `'addon'` (custom pack options) |
+| `input_type` | varchar(20) | `'checkbox'` or `'select'`; applies to addon rows only |
 
-`JWPB_DB::save_pack_items()` is a full replace (delete + insert) — not an upsert.
+Both `save_pack_items()` and `save_addon_items()` are full replace (delete by `item_role` then insert) — not upserts. They operate independently so saving standard items never touches addon rows and vice versa.
 
 #### Pack postmeta (stored on `product` post type)
 
 | Key | Type | Notes |
 |---|---|---|
-| `_pack_pricing_mode` | string | `fixed` or `sum` |
-| `_pack_price_override` | decimal string | Fixed mode only; also written to `_price` / `_regular_price` |
+| `_pack_type` | string | `standard` or `custom` |
+| `_pack_pricing_mode` | string | `fixed` or `sum`; standard packs only |
+| `_pack_price_override` | decimal string | Standard + fixed mode only; written to `_price` / `_regular_price` |
 | `_pack_item_label` | string | Column header override for the shortcode table ("Product") |
 | `_pack_qty_label` | string | Column header override for the shortcode table ("Quantity") |
 | `_pack_subscription_enabled` | `yes`/`no` | |
 | `_pack_subscription_interval` | int | |
 | `_pack_subscription_period` | string | `day/week/month/year` |
 | `_pack_subscription_length` | int | 0 = indefinite |
-| `_pack_seasonal_enabled` | `yes`/`no` | |
+| `_pack_seasonal_enabled` | `yes`/`no` | Standard packs only |
 | `_pack_seasonal_count` | int | Items drawn from seasonal pool per rotation |
 | `_pack_seasonal_last_rotated` | MySQL datetime | Updated by `JWPB_Seasonal::rotate()` |
 
@@ -76,18 +86,24 @@ Managed by `JWPB_DB`. Created on activation, dropped on uninstall (product postm
 |---|---|
 | `_jwpb_contents` | JSON `[{"id":X,"name":"...","sku":"...","qty":Y},...]` |
 
+#### Custom pack cart item data
+
+When a custom pack is added to cart, `JWPB_Cart::enrich_cart_item_data()` reads POST field `jwpb_addon_sel` (an array keyed `"{product_id}_{variation_id}" => quantity`) and stores validated selections as `_jwpb_addon_selections` on the cart item. Each selection is cross-checked against `JWPB_DB::get_addon_items()` so customers cannot inject arbitrary product IDs.
+
+For custom packs, `JWPB_Cart::set_pack_price()` seeds the running total from `get_post_meta($product->get_id(), '_price', true)` — reading directly from postmeta bypasses the in-memory object so the value is correct even if `set_price()` was already called earlier in the same request. Each selected addon's price × quantity is then added on top.
+
 ### Product Data Tabs
 
 Pack products show two tabs in the WooCommerce product editor:
 
-- **Pack Contents** (`jwpb_contents_data`) — pricing mode, pack price override, column label overrides, seasonal rotation toggle + fields, product search, and the items table. The General tab is hidden for pack products via `hide_if_pack` class.
+- **Pack Contents** (`jwpb_contents_data`) — pack type radio (Standard / Custom). Standard packs: pricing mode, pack price override, column label overrides, seasonal rotation toggle + fields, product search, items table (all in `.jwpb-standard-only` groups). Custom packs: addon product search, addon items table with input-type selector (`.jwpb-custom-only`). The General tab has `hide_if_pack` class so WC hides it for all pack types; `togglePackType()` in JS then re-shows it for custom packs so WC's native regular/sale price fields are available as the base price.
 - **Subscription** (`jwpb_subscription_data`) — subscription billing enable, interval, period, length.
 
 `woocommerce_pack_add_to_cart` is hooked to `woocommerce_simple_add_to_cart` so the standard add-to-cart button renders on single product pages.
 
 ### Seasonal Pool
 
-Products must be tagged with the configured **Seasonal Pool Tag** (stored as `seasonal_tag` in `jwpb_settings`, defaults to `"seasonal"`) and have `stock_status = instock` to appear in the pool. `JWPB_Seasonal::get_pool()` reads this setting at runtime via `JWPB_Settings::get('seasonal_tag', 'seasonal')`. Rotation is **manual only** — no WP Cron schedule. The "Rotate Now" button in the Pack Contents tab calls `JWPB_Seasonal::rotate()` via AJAX.
+Applies to **standard packs only** — the Seasonal Rotation section is hidden in the editor when pack type is Custom. Products must be tagged with the configured **Seasonal Pool Tag** (stored as `seasonal_tag` in `jwpb_settings`, defaults to `"seasonal"`) and have `stock_status = instock` to appear in the pool. `JWPB_Seasonal::get_pool()` reads this setting at runtime via `JWPB_Settings::get('seasonal_tag', 'seasonal')`. Rotation is **manual only** — no WP Cron schedule. The "Rotate Now" button in the Pack Contents tab calls `JWPB_Seasonal::rotate()` via AJAX.
 
 ### Subscription Bridge
 
@@ -106,16 +122,36 @@ Option key `jwpb_settings` (serialised array). Current keys:
 | `pack_contents_placement` | `none` / `after_price` / `after_excerpt` / `after_add_to_cart` / `after_meta` / `after_summary` | Hooks `JWPB_Shortcode::render()` into the matching WC product template action; fires only when `$product instanceof WC_Product_Pack` |
 | `seasonal_tag` | any WC product tag slug | Tag used to identify the seasonal pool; defaults to `"seasonal"` |
 
+### License Gate
+
+The license check in the entry point (`jwpb_init()`) controls which classes load:
+
+- **Always loaded** (regardless of license): `JWPB_DB`, `JWPB_Updater`, `JWPB_License`, `JWPB_Admin`, `JWPB_Settings`
+- **License-gated** (only when `$license->is_valid()`): `WC_Product_Pack`, `JWPB_Product_Type`, `JWPB_Seasonal`, `JWPB_Subscription_Bridge`, `JWPB_Cart`, `JWPB_Order`, `JWPB_Ajax`, `JWPB_Shortcode`
+
+This means on an unlicensed install the "pack" product type does not exist in WooCommerce at all — the product type dropdown entry, the product data tabs, AJAX handlers, shortcode, and cart/order hooks are all absent.
+
 ### Frontend JS (`assets/js/editor.js`)
 
 Loaded only on the WC product edit screen (when product type is `pack`). Uses jQuery + WC's bundled Select2. Key behaviours:
 
-- **Product search** — uses a custom `jwpb-product-search` class (not `wc-product-search`) to prevent WooCommerce auto-initialising Select2 over it. Calls WC's built-in `woocommerce_json_search_products` AJAX action with `exclude_type: 'pack'`.
-- **Add row** — calls `jwpb_get_product_info` AJAX action to fetch product details (name, SKU, price HTML, variations list) and appends a DOM row.
-- **Form serialise** — on `#post` submit, iterates visible rows and writes `JSON.stringify(items)` into `#jwpb-items-json` hidden field; PHP reads this field in the meta save handler.
+- **Product search** — uses a custom `jwpb-product-search` class (not `wc-product-search`) to prevent WooCommerce auto-initialising Select2 over it. Calls WC's built-in `woocommerce_json_search_products` AJAX action with `exclude_type: 'pack'`. Two separate search selects: `#jwpb-product-search` (standard items) and `#jwpb-addon-product-search` (addon items).
+- **Add row** — calls `jwpb_get_product_info` AJAX action to fetch product details (name, SKU, price HTML, variations list) and appends a DOM row to the appropriate table.
+- **Form serialise** — on `#post` submit, iterates visible rows in the standard table → `#jwpb-items-json` (`_pack_items_json`) and addon table → `#jwpb-addon-items-json` (`_pack_addon_items_json`); PHP reads both fields in the meta save handler.
+- **Pack type toggle** — shows/hides `.jwpb-standard-only` and `.jwpb-custom-only` sections based on the `_pack_type` radio selection.
+- **Addon input type** — each addon row has a select for `input_type` (`checkbox` or `select`), serialised into `_pack_addon_items_json`.
 - **Variation select** — updates the price cell from locally cached variation data (no round-trip).
 - **Pricing mode toggle** — shows/hides `.jwpb-fixed-price-field` based on the selected radio.
-- **Localized object** — `jwpbData` (printed by `JWPB_Product_Type`): `ajaxurl`, `adminNonce`, `searchNonce`, `existingItems[]`, `defaultType`, `i18n{}`.
+- **Localized object** — `jwpbData` (printed by `JWPB_Product_Type`): `ajaxurl`, `currency`, `adminNonce`, `searchNonce`, `existingItems[]`, `existingAddonItems[]`, `packType` (current saved pack type), `defaultType` (from `?jwpb_type=` GET param for new products), `i18n{}`.
+
+### Admin JS (`assets/js/admin.js`)
+
+Loaded only on the WC → Packs admin page (`woocommerce_page_jwpb-pack-builder` hook). Manages the slide-down create/edit form panel. Key behaviours:
+
+- **Create pack** — calls `jwpb_create_pack` AJAX action; on success redirects to the WC product editor for the new draft.
+- **Edit pack** — calls `jwpb_get_pack_data` to prefill the form, then `jwpb_update_pack` on submit; on success redirects back to the Packs list with `?updated=1`.
+- **Pricing mode toggle** — same show/hide of `.jwpb-fixed-price-field` as in `editor.js`.
+- **Localized object** — `jwpbAdmin` (printed by `JWPB_Admin`): `ajaxurl`, `nonce`, `currency`, `i18n{}`.
 
 ### Shortcode (`[jwpb_pack_contents]`)
 
@@ -130,6 +166,9 @@ Renders pack items as a two-column table (product name + qty). Accepts optional 
 | Get pool count | `jwpb_admin_nonce` | `manage_woocommerce` |
 | Get product info (editor) | `jwpb_admin_nonce` | `manage_woocommerce` |
 | Save settings | `jwpb_save_settings` | `manage_woocommerce` |
+| Create pack (admin page) | `jwpb_admin_nonce` | `manage_woocommerce` |
+| Get pack data (admin page) | `jwpb_admin_nonce` | `manage_woocommerce` |
+| Update pack (admin page) | `jwpb_admin_nonce` | `manage_woocommerce` |
 | License activate | `jezweb_license_activate` | `manage_options` |
 | License deactivate | `jezweb_license_deactivate` | `manage_options` |
 | Product search (WC built-in) | `search-products` | `manage_woocommerce` |
@@ -138,8 +177,13 @@ Renders pack items as a two-column table (product name + qty). Accepts optional 
 
 1. Update `JWPB_VERSION` constant and `Version:` header in the entry point
 2. Update `Stable tag:` in `readme.txt` and add a changelog entry
-3. Upload via JezPress CLI (run from plugin parent directory):
+3. Package the ZIP (run from the plugin's parent directory):
+   ```bash
+   zip -r jezpress-woo-pack-builder.zip jezpress-woo-pack-builder -x "*.git*" -x "*CLAUDE.md" -x "*PLAN.md"
+   ```
+4. Preflight and upload via JezPress CLI:
    ```bash
    jezpress plugins preflight jezpress-woo-pack-builder ./jezpress-woo-pack-builder.zip
    jezpress plugins upload jezpress-woo-pack-builder ./jezpress-woo-pack-builder.zip
    ```
+5. Notify the team via the Jezweb dev Google Chat space (see parent `plugins/CLAUDE.md` for the webhook payload format).

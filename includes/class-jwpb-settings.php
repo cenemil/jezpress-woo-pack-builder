@@ -107,6 +107,7 @@ class JWPB_Settings {
 		$settings                            = get_option( self::OPTION_KEY, array() );
 		$settings['pack_contents_placement'] = $placement;
 		$settings['seasonal_tag']            = $seasonal_tag;
+		$settings['shipping_weight_debug']   = ! empty( $_POST['shipping_weight_debug'] );
 		update_option( self::OPTION_KEY, $settings );
 
 		wp_safe_redirect(

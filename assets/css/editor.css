@@ -71,36 +71,140 @@
 	color: #646970;
 }
 
-/* Pack type radio row */
-.jwpb-pack-type-radios label {
-	margin-right: 16px;
+
+/* Addon field groups (custom pack type) */
+.jwpb-addon-fields-container {
+	margin: 8px 12px 4px;
+}
+
+.jwpb-addon-field {
+	border: 1px solid #dcdcde;
+	margin-bottom: 10px;
+	background: #fff;
+}
+
+.jwpb-addon-field-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 9px 14px;
+	border-bottom: 1px solid #dcdcde;
 	cursor: pointer;
+	user-select: none;
 }
 
-/* Addon items table */
-.jwpb-addon-items-table {
+.jwpb-addon-field:not(.jwpb-addon-field--open) > .jwpb-addon-field-header {
+	border-bottom-color: transparent;
+}
+
+.jwpb-addon-field-header-left {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.jwpb-field-toggle-icon {
+	font-size: 10px;
+	color: #646970;
+	line-height: 1;
+	transition: transform 0.15s ease;
+}
+
+.jwpb-addon-field-title {
+	font-weight: 600;
+	color: #3c434a;
+	font-size: 13px;
+}
+
+.jwpb-addon-field-settings {
+	display: flex;
+	flex-direction: row;
+	gap: 20px;
+	align-items: flex-start;
+	padding: 10px 14px;
+	border-bottom: 1px solid #f0f0f1;
+}
+
+.jwpb-addon-field-settings .jwpb-field-setting:first-child {
+	flex: 1;
+}
+
+.jwpb-addon-field-settings .jwpb-field-setting:first-child .jwpb-addon-field-label-input {
+	width: 100%;
+	min-width: 0;
+	box-sizing: border-box;
+}
+
+.jwpb-field-setting {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 4px;
+}
+
+.jwpb-field-setting-label {
+	display: block;
+	font-size: 13px;
+	color: #3c434a;
+}
+
+.jwpb-addon-field-label-input {
+	min-width: 220px;
+}
+
+.jwpb-addon-field-qty-input {
+	width: 54px;
+	text-align: center;
+}
+
+.jwpb-addon-field-products {
+	padding: 12px 14px;
+}
+
+.jwpb-field-products-table {
 	border-collapse: separate;
-	margin-top: 8px;
-	margin-bottom: 8px;
+	margin-top: 0;
 }
 
-.jwpb-addon-items-table th,
-.jwpb-addon-items-table td {
-	padding: 8px 10px;
+.jwpb-field-products-table th,
+.jwpb-field-products-table td {
+	padding: 7px 10px;
 	vertical-align: middle;
 	border-bottom: 1px solid #f0f0f1;
 }
 
-.jwpb-addon-items-table thead th {
+.jwpb-field-products-table thead th {
 	background: #f6f7f7;
 	font-weight: 600;
 	color: #3c434a;
+	font-size: 12px;
 }
 
-.jwpb-addon-items-table tbody tr:hover {
+.jwpb-field-products-table tbody tr:hover {
 	background: #f6f7f7;
 }
 
-.jwpb-addon-input-type {
-	min-width: 140px;
+.jwpb-addon-fields-empty {
+	padding: 14px 24px;
+	color: #999;
+	font-style: italic;
+	font-size: 13px;
 }
+
+.jwpb-add-field-row {
+	padding: 0 12px 14px;
+}
+
+.jwpb-row-search-cell select {
+	width: 100%;
+	min-width: 200px;
+}
+
+.jwpb-field-add-option-row {
+	margin-top: 8px;
+}
+
+#jwpb_contents_data span.description {
+	margin: 0;
+}
+

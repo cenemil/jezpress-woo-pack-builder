@@ -7,7 +7,7 @@ Requires at least: 5.8
 Tested up to: 6.7
 Requires PHP: 7.4
 WC requires at least: 6.0
-Stable tag: 1.1.5
+Stable tag: 1.1.6
 License: Proprietary
 
 Build product packs (hampers, gift boxes, meal kits) with flexible pricing, subscription billing, and seasonal rotation.
@@ -36,6 +36,21 @@ JezPress Woo Pack Builder adds a "Pack" product type to WooCommerce. Staff build
 4. Create packs via Products → Add New → select product type "Pack"
 
 == Changelog ==
+
+= 1.1.6 =
+* Custom pack type: addon product weights are now included in WooCommerce shipping calculations
+* Standard pack type: same weight calculation logic applied (base product + sum of item weights × qty)
+* Shipping weight is stamped as a plain scalar on cart items via woocommerce_cart_shipping_packages so all shipping rate plugins receive the correct weight
+* Added "Shipping Weight Debug" toggle in WooCommerce → Packs → Settings to show a weight breakdown panel on cart/checkout pages
+* Removed file-based debug logging (WC logger); debug output is frontend-only via the debug panel
+* Custom pack type: addon products are excluded from WooCommerce related products loop
+* Frontend addon display: input-type addons show label (+price) then input field inline; checkbox-type addons show checkbox label (+price)
+* Subtotal section hidden by default on product page; appears only when at least one addon is selected
+* Added summary breakdown of base product and selected addons above the subtotal, with border separators and right-aligned prices
+* Admin editor: added button-small class to standard pack item remove buttons
+* Admin editor: addon field settings (Label/Type) are horizontal with block labels above inputs; Label field fills remaining width
+* Admin editor: removed border-radius and heading background from addon field boxes
+* Fixed woocommerce_related_products filter name (was woocommerce_related_posts — updated for WC 10.x)
 
 = 1.1.5 =
 * Fix form-table description font size in admin settings

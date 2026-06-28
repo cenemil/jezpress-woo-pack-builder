@@ -3,7 +3,7 @@
  * Plugin Name: JezPress Woo Pack Builder
  * Plugin URI:  https://jezweb.com.au
  * Description: Build product packs (hampers, gift boxes, meal kits) from a WP admin UI. Custom WooCommerce product type with flexible pricing, subscription billing, and seasonal item rotation.
- * Version:     1.1.5
+ * Version:     1.1.6
  * Author:      Jezweb
  * Author URI:  https://jezweb.com.au
  * Text Domain: jezpress-woo-pack-builder
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'JWPB_VERSION', '1.1.5' );
+define( 'JWPB_VERSION', '1.1.6' );
 define( 'JWPB_DIR', plugin_dir_path( __FILE__ ) );
 define( 'JWPB_URL', plugin_dir_url( __FILE__ ) );
 

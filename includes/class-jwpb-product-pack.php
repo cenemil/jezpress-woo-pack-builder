@@ -43,11 +43,17 @@ class WC_Product_Pack extends WC_Product {
 	}
 
 	// -------------------------------------------------------------------------
-	// Price override — sum mode adds up constituent prices from the DB table.
-	// For custom packs in sum mode, sums all addon prices at qty 1.
+	// Price — custom packs use WC native price (General tab); standard packs
+	// use sum-of-items or a fixed override.
 	// -------------------------------------------------------------------------
 
 	public function get_price( $context = 'view' ) {
+		if ( $this->is_custom() ) {
+			// WC General tab manages _price / _regular_price / _sale_price.
+			// Cart adds selected addon prices on top via JWPB_Cart::set_pack_price().
+			return parent::get_price( $context );
+		}
+
 		if ( 'sum' === $this->get_pack_pricing_mode() ) {
 			return $this->calculate_sum_price();
 		}
@@ -82,19 +88,45 @@ class WC_Product_Pack extends WC_Product {
 	}
 
 	/**
-	 * Return selectable addon items (custom packs only) from the database.
+	 * Return addon field groups (custom packs only) from postmeta.
 	 *
-	 * Each item: [ product_id (int), variation_id (int), input_type (string), sort_order (int) ]
+	 * Each field: [ label (string), quantity (int), products[] => [ product_id, variation_id ] ]
 	 *
-	 * @param string $context Ignored — DB is always the source.
 	 * @return array[]
 	 */
-	public function get_addon_items( $context = 'view' ) {
+	public function get_addon_fields( $context = 'view' ) {
 		$id = $this->get_id();
 		if ( ! $id ) {
 			return array();
 		}
-		return JWPB_DB::get_addon_items( $id );
+		$json   = get_post_meta( $id, '_pack_addon_fields', true );
+		$fields = $json ? json_decode( $json, true ) : array();
+		return is_array( $fields ) ? $fields : array();
+	}
+
+	/**
+	 * Return a flat list of selectable addon products derived from field groups.
+	 *
+	 * Each item: [ product_id (int), variation_id (int), input_type (string) ]
+	 *
+	 * @param string $context Unused — postmeta is always the source.
+	 * @return array[]
+	 */
+	public function get_addon_items( $context = 'view' ) {
+		$items = array();
+		foreach ( $this->get_addon_fields() as $field ) {
+			$input_type = in_array( $field['field_type'] ?? '', array( 'checkbox', 'input' ), true )
+				? $field['field_type']
+				: 'checkbox';
+			foreach ( $field['products'] ?? array() as $p ) {
+				$items[] = array(
+					'product_id'   => $p['product_id'],
+					'variation_id' => $p['variation_id'],
+					'input_type'   => $input_type,
+				);
+			}
+		}
+		return $items;
 	}
 
 	// -------------------------------------------------------------------------
