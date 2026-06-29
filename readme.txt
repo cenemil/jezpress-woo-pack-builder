@@ -7,7 +7,7 @@ Requires at least: 5.8
 Tested up to: 6.7
 Requires PHP: 7.4
 WC requires at least: 6.0
-Stable tag: 1.1.6
+Stable tag: 1.1.7
 License: Proprietary
 
 Build product packs (hampers, gift boxes, meal kits) with flexible pricing, subscription billing, and seasonal rotation.
@@ -36,6 +36,9 @@ JezPress Woo Pack Builder adds a "Pack" product type to WooCommerce. Staff build
 4. Create packs via Products → Add New → select product type "Pack"
 
 == Changelog ==
+
+= 1.1.7 =
+* Settings: added "Exclude Pack Items from Related Products" toggle — when enabled, all products used as items in any pack (standard or addon) are excluded from the WooCommerce related products section
 
 = 1.1.6 =
 * Custom pack type: addon product weights are now included in WooCommerce shipping calculations

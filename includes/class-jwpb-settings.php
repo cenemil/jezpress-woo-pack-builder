@@ -104,10 +104,11 @@ class JWPB_Settings {
 			$seasonal_tag = 'seasonal';
 		}
 
-		$settings                            = get_option( self::OPTION_KEY, array() );
-		$settings['pack_contents_placement'] = $placement;
-		$settings['seasonal_tag']            = $seasonal_tag;
-		$settings['shipping_weight_debug']   = ! empty( $_POST['shipping_weight_debug'] );
+		$settings                                     = get_option( self::OPTION_KEY, array() );
+		$settings['pack_contents_placement']          = $placement;
+		$settings['seasonal_tag']                     = $seasonal_tag;
+		$settings['shipping_weight_debug']            = ! empty( $_POST['shipping_weight_debug'] );
+		$settings['exclude_pack_items_from_related']  = ! empty( $_POST['exclude_pack_items_from_related'] );
 		update_option( self::OPTION_KEY, $settings );
 
 		wp_safe_redirect(

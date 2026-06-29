@@ -28,7 +28,9 @@ class JWPB_Product_Type {
 		add_action( 'admin_enqueue_scripts',            array( __CLASS__, 'enqueue_scripts' ) );
 		// Use the simple add-to-cart template for pack products on the single product page.
 		add_action( 'woocommerce_pack_add_to_cart',     'woocommerce_simple_add_to_cart' );
-		add_filter( 'woocommerce_related_products',     array( __CLASS__, 'exclude_addon_products_from_related' ), 10, 3 );
+		if ( JWPB_Settings::get( 'exclude_pack_items_from_related', false ) ) {
+			add_filter( 'woocommerce_related_products', array( __CLASS__, 'exclude_pack_items_from_related' ), 10, 3 );
+		}
 	}
 
 	// -------------------------------------------------------------------------
@@ -49,41 +51,38 @@ class JWPB_Product_Type {
 	// -------------------------------------------------------------------------
 
 	/**
-	 * Remove addon products from the WooCommerce related products list.
-	 * Products configured as selectable addons in any custom pack are not
-	 * standalone purchase candidates and should not appear as recommendations.
+	 * Remove pack item products from the WooCommerce related products list.
+	 * Products used as standard items or selectable addons in any pack should
+	 * not appear as standalone purchase recommendations.
 	 *
 	 * @param int[]  $related_posts Related product IDs.
 	 * @param int    $product_id    Current product ID (unused).
 	 * @param array  $args          Related posts query args (unused).
 	 * @return int[]
 	 */
-	public static function exclude_addon_products_from_related( $related_posts, $product_id, $args ) {
-		$addon_ids = self::get_all_addon_product_ids();
-		if ( empty( $addon_ids ) ) {
+	public static function exclude_pack_items_from_related( $related_posts, $product_id, $args ) {
+		$item_ids = self::get_all_pack_item_product_ids();
+		if ( empty( $item_ids ) ) {
 			return $related_posts;
 		}
-		return array_values( array_diff( $related_posts, $addon_ids ) );
+		return array_values( array_diff( $related_posts, $item_ids ) );
 	}
 
 	/**
-	 * Fetch all distinct product IDs that appear as addon items in any pack.
+	 * Fetch all distinct product IDs that appear as any item role in any pack.
 	 * Result is memoised for the duration of the request.
 	 *
 	 * @return int[]
 	 */
-	private static function get_all_addon_product_ids() {
+	private static function get_all_pack_item_product_ids() {
 		static $ids = null;
 		if ( null !== $ids ) {
 			return $ids;
 		}
 		global $wpdb;
 		$rows = $wpdb->get_col(
-			$wpdb->prepare(
-				'SELECT DISTINCT product_id FROM %i WHERE item_role = %s',
-				JWPB_DB::table_name(),
-				'addon'
-			)
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			'SELECT DISTINCT product_id FROM ' . JWPB_DB::table_name()
 		);
 		$ids = array_map( 'intval', $rows ?: array() );
 		return $ids;

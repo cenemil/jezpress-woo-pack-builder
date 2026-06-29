@@ -181,6 +181,21 @@ class JWPB_Admin {
 
 						<tr>
 							<th scope="row">
+								<label for="exclude_pack_items_from_related">
+									<?php esc_html_e( 'Exclude Pack Items from Related Products', 'jezpress-woo-pack-builder' ); ?>
+								</label>
+							</th>
+							<td>
+								<label>
+									<input type="checkbox" id="exclude_pack_items_from_related" name="exclude_pack_items_from_related" value="1"
+										<?php checked( JWPB_Settings::get( 'exclude_pack_items_from_related', false ) ); ?>>
+									<?php esc_html_e( 'Prevent products used as pack items (standard or addon) from appearing in the WooCommerce related products section.', 'jezpress-woo-pack-builder' ); ?>
+								</label>
+							</td>
+						</tr>
+
+						<tr>
+							<th scope="row">
 								<label for="shipping_weight_debug">
 									<?php esc_html_e( 'Shipping Weight Debug', 'jezpress-woo-pack-builder' ); ?>
 								</label>

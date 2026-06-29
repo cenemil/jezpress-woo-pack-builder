@@ -121,6 +121,7 @@ Option key `jwpb_settings` (serialised array). Current keys:
 |---|---|---|
 | `pack_contents_placement` | `none` / `after_price` / `after_excerpt` / `after_add_to_cart` / `after_meta` / `after_summary` | Hooks `JWPB_Shortcode::render()` into the matching WC product template action; fires only when `$product instanceof WC_Product_Pack` |
 | `seasonal_tag` | any WC product tag slug | Tag used to identify the seasonal pool; defaults to `"seasonal"` |
+| `exclude_pack_items_from_related` | `true`/`false` | When enabled, all products used as items in any pack (standard or addon, any pack type) are excluded from the WooCommerce related products section |
 
 ### License Gate
 
