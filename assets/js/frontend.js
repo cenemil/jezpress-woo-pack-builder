@@ -96,7 +96,8 @@
 	}
 
 	// -------------------------------------------------------------------------
-	// Form submit validation
+	// Form submit: validate, then sync addon inputs that live outside the cart
+	// form (any placement other than 'before_add_to_cart') into hidden fields.
 	// -------------------------------------------------------------------------
 	$form.on('submit', function (e) {
 		if (!hasSelection()) {
@@ -106,6 +107,27 @@
 			return false;
 		}
 		$error.hide();
+
+		// If the addon form is outside <form class="cart">, its inputs won't
+		// submit automatically — copy the current values as hidden fields.
+		var $outside = $addonForm.find('[name^="jwpb_addon_sel"]').not($form.find('[name^="jwpb_addon_sel"]'));
+		if ($outside.length) {
+			$form.find('.jwpb-synced-addon-inputs').remove();
+			var $container = $('<div class="jwpb-synced-addon-inputs" style="display:none">');
+			$outside.each(function () {
+				var $inp = $(this);
+				var val;
+				if ($inp.is(':checkbox')) {
+					if (!$inp.is(':checked')) { return; }
+					val = '1';
+				} else {
+					val = $inp.val();
+					if (!parseInt(val, 10)) { return; }
+				}
+				$container.append($('<input type="hidden">').attr('name', $inp.attr('name')).val(val));
+			});
+			$form.append($container);
+		}
 	});
 
 	// -------------------------------------------------------------------------

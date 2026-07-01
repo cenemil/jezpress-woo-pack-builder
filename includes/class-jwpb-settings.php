@@ -28,13 +28,18 @@ class JWPB_Settings {
 
 	/**
 	 * All valid placement keys with their WC hook + priority.
+	 *
+	 * 'before_add_to_cart' fires inside <form class="cart"> so addon inputs
+	 * are submitted natively — no JS sync required. All other positions are
+	 * outside that form; frontend.js copies the selections on submit.
 	 */
 	const PLACEMENTS = array(
-		'after_price'       => array( 'woocommerce_single_product_summary',       21 ),
-		'after_excerpt'     => array( 'woocommerce_single_product_summary',       26 ),
-		'after_add_to_cart' => array( 'woocommerce_single_product_summary',       31 ),
-		'after_meta'        => array( 'woocommerce_single_product_summary',       41 ),
-		'after_summary'     => array( 'woocommerce_after_single_product_summary', 10 ),
+		'before_add_to_cart' => array( 'woocommerce_before_add_to_cart_button',   10 ),
+		'after_price'        => array( 'woocommerce_single_product_summary',       21 ),
+		'after_excerpt'      => array( 'woocommerce_single_product_summary',       26 ),
+		'after_add_to_cart'  => array( 'woocommerce_single_product_summary',       31 ),
+		'after_meta'         => array( 'woocommerce_single_product_summary',       41 ),
+		'after_summary'      => array( 'woocommerce_after_single_product_summary', 10 ),
 	);
 
 	public static function init() {
@@ -62,8 +67,8 @@ class JWPB_Settings {
 	}
 
 	/**
-	 * Auto-inject callback — echoes the pack contents table when the current
-	 * product is a Pack. Called by whichever WC hook the placement maps to.
+	 * Auto-inject callback — renders pack contents at the configured placement.
+	 * Custom packs get the addon selection form; standard packs get the items table.
 	 *
 	 * @return void
 	 */
@@ -71,6 +76,12 @@ class JWPB_Settings {
 		global $product;
 
 		if ( ! ( $product instanceof WC_Product_Pack ) ) {
+			return;
+		}
+
+		if ( $product->is_custom() ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			echo JWPB_Shortcode::get_addon_form_html( $product );
 			return;
 		}
 
@@ -127,12 +138,13 @@ class JWPB_Settings {
 	 */
 	public static function placement_labels() {
 		return array(
-			'none'            => __( 'None — manual shortcode only',          'jezpress-woo-pack-builder' ),
-			'after_price'     => __( 'After product price',                    'jezpress-woo-pack-builder' ),
-			'after_excerpt'   => __( 'After short description',                'jezpress-woo-pack-builder' ),
-			'after_add_to_cart' => __( 'After add-to-cart button',             'jezpress-woo-pack-builder' ),
-			'after_meta'      => __( 'After product meta',                     'jezpress-woo-pack-builder' ),
-			'after_summary'   => __( 'Below product summary (above tabs)',     'jezpress-woo-pack-builder' ),
+			'none'               => __( 'None — manual shortcode only',              'jezpress-woo-pack-builder' ),
+			'before_add_to_cart' => __( 'Before Add to Cart button (inside form)',   'jezpress-woo-pack-builder' ),
+			'after_price'        => __( 'After product price',                       'jezpress-woo-pack-builder' ),
+			'after_excerpt'      => __( 'After short description',                   'jezpress-woo-pack-builder' ),
+			'after_add_to_cart'  => __( 'After add-to-cart button',                  'jezpress-woo-pack-builder' ),
+			'after_meta'         => __( 'After product meta',                        'jezpress-woo-pack-builder' ),
+			'after_summary'      => __( 'Below product summary (above tabs)',        'jezpress-woo-pack-builder' ),
 		);
 	}
 }

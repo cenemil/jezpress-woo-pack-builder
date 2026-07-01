@@ -125,8 +125,19 @@
 }
 
 .jwpb-addon-qty {
-	width: 70px !important;
+	width: 70px;
 	text-align: center;
+	padding: 4px 6px;
+	border: 1px solid #ccc;
+	border-radius: 3px;
+	font-size: inherit;
+	font-family: inherit;
+}
+
+/* Prevent theme or WooCommerce hooks from injecting <br> into addon labels. */
+.jwpb-addon-label br,
+.jwpb-addon-name br {
+	display: none;
 }
 
 .jwpb-addon-summary {

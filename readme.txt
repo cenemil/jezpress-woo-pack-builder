@@ -7,7 +7,7 @@ Requires at least: 5.8
 Tested up to: 6.7
 Requires PHP: 7.4
 WC requires at least: 6.0
-Stable tag: 1.1.7
+Stable tag: 1.1.8
 License: Proprietary
 
 Build product packs (hampers, gift boxes, meal kits) with flexible pricing, subscription billing, and seasonal rotation.
@@ -36,6 +36,12 @@ JezPress Woo Pack Builder adds a "Pack" product type to WooCommerce. Staff build
 4. Create packs via Products → Add New → select product type "Pack"
 
 == Changelog ==
+
+= 1.1.8 =
+* Custom pack type: fixed spurious <br> elements appearing between addon product list items on product pages — template rebuilt as PHP string concatenation so rendering filters (wpautop, theme hooks) have no inter-element whitespace to convert
+* Custom pack type: pack_contents_placement setting now correctly governs the addon form; setting to "None" suppresses auto-injection for both standard and custom packs
+* Custom pack type: added "Before Add to Cart button (inside form)" placement option so addon inputs submit natively without JavaScript syncing
+* Refactored get_addon_form_html(): removed unused price_html fetch per row, deduplicated pricing mode and base price lookups, extracted addon_row_label() helper, simplified group data structure
 
 = 1.1.7 =
 * Settings: added "Exclude Pack Items from Related Products" toggle — when enabled, all products used as items in any pack (standard or addon) are excluded from the WooCommerce related products section

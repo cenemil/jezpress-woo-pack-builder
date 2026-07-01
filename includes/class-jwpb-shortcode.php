@@ -20,9 +20,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class JWPB_Shortcode {
 
+	/** Guard against double-rendering the addon form in one page load. */
+	private static $addon_form_rendered = false;
+
 	public static function init() {
 		add_shortcode( 'jwpb_pack_contents', array( __CLASS__, 'render' ) );
-		add_action( 'woocommerce_before_add_to_cart_button', array( __CLASS__, 'render_addon_form' ) );
 	}
 
 	/**
@@ -55,6 +57,11 @@ class JWPB_Shortcode {
 		$pack = wc_get_product( $pack_id );
 		if ( ! ( $pack instanceof WC_Product_Pack ) ) {
 			return '';
+		}
+
+		// Custom packs have no fixed items — render the addon selection form instead.
+		if ( $pack->is_custom() ) {
+			return self::get_addon_form_html( $pack );
 		}
 
 		$items = $pack->get_pack_items();
@@ -176,28 +183,29 @@ class JWPB_Shortcode {
 	}
 
 	/**
-	 * Render the addon selection form for custom packs.
-	 * Hooked into woocommerce_before_add_to_cart_button — fires inside <form class="cart">.
+	 * Build and return the addon selection form HTML for a custom pack.
 	 *
-	 * @return void
+	 * Called by auto_inject() (via JWPB_Settings) and by render() when the
+	 * shortcode is used on a custom pack. A static guard prevents the form
+	 * from rendering twice if both paths fire on the same page load.
+	 *
+	 * @param WC_Product_Pack $pack
+	 * @return string HTML or empty string.
 	 */
-	public static function render_addon_form() {
-		global $product;
-
-		if ( ! ( $product instanceof WC_Product_Pack ) || ! $product->is_custom() ) {
-			return;
+	public static function get_addon_form_html( WC_Product_Pack $pack ) {
+		if ( self::$addon_form_rendered || ! $pack->is_custom() ) {
+			return '';
 		}
 
-		$addon_fields = $product->get_addon_fields();
+		$addon_fields = $pack->get_addon_fields();
 		if ( empty( $addon_fields ) ) {
-			return;
+			return '';
 		}
 
 		// Build display groups — skip fields with no resolvable products.
 		$groups = array();
 
 		foreach ( $addon_fields as $field ) {
-			$label      = $field['label'] ?? '';
 			$field_type = in_array( $field['field_type'] ?? '', array( 'checkbox', 'input' ), true )
 				? $field['field_type'] : 'checkbox';
 			$rows = array();
@@ -229,121 +237,92 @@ class JWPB_Shortcode {
 					'field_key'  => $product_id . '_' . $variation_id,
 					'name'       => $parent->get_name(),
 					'var_label'  => $var_label,
-					'price_html' => $display_product->get_price_html(),
 					'price_raw'  => (float) $display_product->get_price(),
 					'input_type' => $field_type,
 				);
 			}
 
-			if ( empty( $rows ) ) {
-				continue;
+			if ( ! empty( $rows ) ) {
+				$groups[] = array(
+					'label' => $field['label'] ?? '',
+					'rows'  => $rows,
+				);
 			}
-
-			$groups[] = array(
-				'label'      => $label,
-				'field_type' => $field_type,
-				'rows'       => $rows,
-			);
 		}
 
 		if ( empty( $groups ) ) {
-			return;
+			return '';
 		}
 
-		wp_enqueue_style(
-			'jwpb-pack-shortcode',
-			JWPB_URL . 'assets/css/shortcode.css',
-			array(),
-			JWPB_VERSION
-		);
+		self::$addon_form_rendered = true;
 
-		wp_enqueue_script(
-			'jwpb-pack-frontend',
-			JWPB_URL . 'assets/js/frontend.js',
-			array( 'jquery' ),
-			JWPB_VERSION,
-			true
-		);
+		$is_sum_mode = 'sum' === $pack->get_pack_pricing_mode();
+		$base_price  = (float) get_post_meta( $pack->get_id(), '_price', true );
 
+		wp_enqueue_style( 'jwpb-pack-shortcode', JWPB_URL . 'assets/css/shortcode.css', array(), JWPB_VERSION );
+		wp_enqueue_script( 'jwpb-pack-frontend', JWPB_URL . 'assets/js/frontend.js', array( 'jquery' ), JWPB_VERSION, true );
 		wp_localize_script( 'jwpb-pack-frontend', 'jwpbFrontend', array(
-			'addonSumMode' => 'sum' === $product->get_pack_pricing_mode() ? 1 : 0,
-			'basePrice'    => (float) get_post_meta( $product->get_id(), '_price', true ),
+			'addonSumMode' => $is_sum_mode ? 1 : 0,
+			'basePrice'    => $base_price,
 			'currency'     => get_woocommerce_currency_symbol(),
 			'i18n'         => array(
 				'selectAtLeastOne' => __( 'Please select at least one item.', 'jezpress-woo-pack-builder' ),
 			),
 		) );
 
-		$is_sum_mode = 'sum' === $product->get_pack_pricing_mode();
+		$html = '<div class="jwpb-addon-form" id="jwpb-addon-form">';
 
-		ob_start();
-		?>
-		<div class="jwpb-addon-form" id="jwpb-addon-form">
-			<?php foreach ( $groups as $group ) : ?>
-			<div class="jwpb-addon-group">
-				<?php if ( $group['label'] ) : ?>
-				<p class="jwpb-addon-group-heading"><?php echo esc_html( $group['label'] ); ?></p>
-				<?php endif; ?>
-				<ul class="jwpb-addon-list">
-					<?php foreach ( $group['rows'] as $row ) : ?>
-					<li class="jwpb-addon-item"
-						data-price="<?php echo esc_attr( $row['price_raw'] ); ?>"
-						data-name="<?php echo esc_attr( $row['name'] . ( $row['var_label'] ? ' – ' . $row['var_label'] : '' ) ); ?>">
-						<?php if ( 'checkbox' === $row['input_type'] ) : ?>
-						<label class="jwpb-addon-label">
-							<input type="checkbox"
-								name="jwpb_addon_sel[<?php echo esc_attr( $row['field_key'] ); ?>]"
-								value="1"
-								class="jwpb-addon-checkbox">
-							<span class="jwpb-addon-name">
-								<?php echo esc_html( $row['name'] ); ?>
-								<?php if ( $row['var_label'] ) : ?>
-									<span class="jwpb-variation-label"><?php echo esc_html( $row['var_label'] ); ?></span>
-								<?php endif; ?>
-								<span class="jwpb-addon-price">(+<?php echo wp_kses_post( wc_price( $row['price_raw'] ) ); ?>)</span>
-							</span>
-						</label>
-						<?php else : ?>
-						<label class="jwpb-addon-label jwpb-addon-label--qty">
-							<span class="jwpb-addon-name">
-								<?php echo esc_html( $row['name'] ); ?>
-								<?php if ( $row['var_label'] ) : ?>
-									<span class="jwpb-variation-label"><?php echo esc_html( $row['var_label'] ); ?></span>
-								<?php endif; ?>
-								<span class="jwpb-addon-price">(+<?php echo wp_kses_post( wc_price( $row['price_raw'] ) ); ?>)</span>
-							</span>
-							<input type="number"
-								name="jwpb_addon_sel[<?php echo esc_attr( $row['field_key'] ); ?>]"
-								value="0"
-								min="0"
-								step="1"
-								class="jwpb-addon-qty input-text qty">
-						</label>
-						<?php endif; ?>
-					</li>
-					<?php endforeach; ?>
-				</ul>
-			</div>
-			<?php endforeach; ?>
-			<?php if ( $is_sum_mode ) : ?>
-			<div class="jwpb-addon-summary" id="jwpb-addon-summary" style="display:none;">
-				<div class="jwpb-summary-row jwpb-summary-base">
-					<span class="jwpb-summary-label"><?php echo esc_html( $product->get_name() ); ?></span>
-					<span class="jwpb-summary-price"><?php echo wp_kses_post( wc_price( (float) get_post_meta( $product->get_id(), '_price', true ) ) ); ?></span>
-				</div>
-				<div id="jwpb-summary-addons"></div>
-			</div>
-			<div class="jwpb-addon-total-row" id="jwpb-addon-total-row" style="display:none;">
-				<span><?php esc_html_e( 'Subtotal:', 'jezpress-woo-pack-builder' ); ?></span>
-				<span id="jwpb-addon-total"></span>
-			</div>
-			<?php endif; ?>
-			<div class="jwpb-addon-error" id="jwpb-addon-error" style="display:none;">
-				<?php esc_html_e( 'Please select at least one item.', 'jezpress-woo-pack-builder' ); ?>
-			</div>
-		</div>
-		<?php
-		echo ob_get_clean(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		foreach ( $groups as $group ) {
+			$html .= '<div class="jwpb-addon-group">';
+			if ( $group['label'] ) {
+				$html .= '<p class="jwpb-addon-group-heading">' . esc_html( $group['label'] ) . '</p>';
+			}
+			$html .= '<ul class="jwpb-addon-list">';
+			foreach ( $group['rows'] as $row ) {
+				$html .= sprintf(
+					'<li class="jwpb-addon-item" data-price="%s" data-name="%s">%s</li>',
+					esc_attr( $row['price_raw'] ),
+					esc_attr( $row['name'] . ( $row['var_label'] ? ' – ' . $row['var_label'] : '' ) ),
+					self::addon_row_label( $row )
+				);
+			}
+			$html .= '</ul></div>';
+		}
+
+		if ( $is_sum_mode ) {
+			$html .= sprintf(
+				'<div class="jwpb-addon-summary" id="jwpb-addon-summary" style="display:none;"><div class="jwpb-summary-row jwpb-summary-base"><span class="jwpb-summary-label">%s</span><span class="jwpb-summary-price">%s</span></div><div id="jwpb-summary-addons"></div></div><div class="jwpb-addon-total-row" id="jwpb-addon-total-row" style="display:none;"><span>%s</span><span id="jwpb-addon-total"></span></div>',
+				esc_html( $pack->get_name() ),
+				wp_kses_post( wc_price( $base_price ) ),
+				esc_html__( 'Subtotal:', 'jezpress-woo-pack-builder' )
+			);
+		}
+
+		$html .= '<div class="jwpb-addon-error" id="jwpb-addon-error" style="display:none;">' . esc_html__( 'Please select at least one item.', 'jezpress-woo-pack-builder' ) . '</div></div>';
+
+		return $html;
+	}
+
+	/**
+	 * Build the <label> HTML for a single addon row.
+	 *
+	 * @param array $row  Keys: field_key, name, var_label, price_raw, input_type.
+	 * @return string
+	 */
+	private static function addon_row_label( array $row ) {
+		$name_span = '<span class="jwpb-addon-name">' . esc_html( $row['name'] );
+		if ( $row['var_label'] ) {
+			$name_span .= ' <span class="jwpb-variation-label">' . esc_html( $row['var_label'] ) . '</span>';
+		}
+		$name_span .= ' <span class="jwpb-addon-price">(+' . wp_kses_post( wc_price( $row['price_raw'] ) ) . ')</span></span>';
+
+		$input_name = 'jwpb_addon_sel[' . esc_attr( $row['field_key'] ) . ']';
+
+		if ( 'checkbox' === $row['input_type'] ) {
+			return '<label class="jwpb-addon-label"><input type="checkbox" name="' . $input_name . '" value="1" class="jwpb-addon-checkbox">' . $name_span . '</label>';
+		}
+
+		return '<label class="jwpb-addon-label jwpb-addon-label--qty">' . $name_span . '<input type="number" name="' . $input_name . '" value="0" min="0" step="1" class="jwpb-addon-qty"></label>';
 	}
 
 	/**
