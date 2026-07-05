@@ -7,7 +7,7 @@ Requires at least: 5.8
 Tested up to: 6.7
 Requires PHP: 7.4
 WC requires at least: 6.0
-Stable tag: 1.1.8
+Stable tag: 1.1.9
 License: Proprietary
 
 Build product packs (hampers, gift boxes, meal kits) with flexible pricing, subscription billing, and seasonal rotation.
@@ -36,6 +36,11 @@ JezPress Woo Pack Builder adds a "Pack" product type to WooCommerce. Staff build
 4. Create packs via Products → Add New → select product type "Pack"
 
 == Changelog ==
+
+= 1.1.9 =
+* Fixed pack contents rendering breaking Elementor layouts when a page displays a pack's contents more than once (e.g. auto-inject placement combined with a manually placed shortcode, or multiple pack products in a related/upsell loop)
+* Standard pack table and custom pack addon form now guard against duplicate rendering per pack ID, instead of a single page-wide flag that only covered one custom pack and didn't cover standard packs at all
+* Cart/checkout pack contents now display as a stacked list (one item per line), visually separated from the pack name, with the "Contains:" label removed
 
 = 1.1.8 =
 * Custom pack type: fixed spurious <br> elements appearing between addon product list items on product pages — template rebuilt as PHP string concatenation so rendering filters (wpautop, theme hooks) have no inter-element whitespace to convert

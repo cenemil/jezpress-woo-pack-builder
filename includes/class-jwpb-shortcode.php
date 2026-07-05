@@ -20,8 +20,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class JWPB_Shortcode {
 
-	/** Guard against double-rendering the addon form in one page load. */
-	private static $addon_form_rendered = false;
+	/**
+	 * Guard against rendering the same pack's contents more than once per
+	 * page load (auto-inject placement + a manually placed shortcode/widget
+	 * both firing for the same pack). Keyed by pack ID so distinct packs
+	 * shown together — e.g. in a related/upsell loop — still each render.
+	 *
+	 * @var array<int,true>
+	 */
+	private static $rendered_pack_ids = array();
 
 	public static function init() {
 		add_shortcode( 'jwpb_pack_contents', array( __CLASS__, 'render' ) );
@@ -64,10 +71,16 @@ class JWPB_Shortcode {
 			return self::get_addon_form_html( $pack );
 		}
 
+		if ( isset( self::$rendered_pack_ids[ $pack_id ] ) ) {
+			return '';
+		}
+
 		$items = $pack->get_pack_items();
 		if ( empty( $items ) ) {
 			return '';
 		}
+
+		self::$rendered_pack_ids[ $pack_id ] = true;
 
 		wp_enqueue_style(
 			'jwpb-pack-shortcode',
@@ -193,7 +206,7 @@ class JWPB_Shortcode {
 	 * @return string HTML or empty string.
 	 */
 	public static function get_addon_form_html( WC_Product_Pack $pack ) {
-		if ( self::$addon_form_rendered || ! $pack->is_custom() ) {
+		if ( ! $pack->is_custom() || isset( self::$rendered_pack_ids[ $pack->get_id() ] ) ) {
 			return '';
 		}
 
@@ -254,7 +267,7 @@ class JWPB_Shortcode {
 			return '';
 		}
 
-		self::$addon_form_rendered = true;
+		self::$rendered_pack_ids[ $pack->get_id() ] = true;
 
 		$is_sum_mode = 'sum' === $pack->get_pack_pricing_mode();
 		$base_price  = (float) get_post_meta( $pack->get_id(), '_price', true );

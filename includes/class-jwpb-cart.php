@@ -218,7 +218,7 @@ class JWPB_Cart {
 	}
 
 	/**
-	 * Append "Contains: …" below the pack name in cart and checkout.
+	 * Append pack contents as a stacked list below the pack name in cart and checkout.
 	 *
 	 * @param string $name          Product name HTML.
 	 * @param array  $cart_item     Cart item data.
@@ -271,10 +271,14 @@ class JWPB_Cart {
 			return $name;
 		}
 
-		$name .= '<br><small class="jwpb-cart-contents" style="font-weight:normal;color:#666;">'
-			. esc_html__( 'Contains:', 'jezpress-woo-pack-builder' ) . ' '
-			. implode( ', ', $parts )
-			. '</small>';
+		$rows = '';
+		foreach ( $parts as $part ) {
+			$rows .= '<div class="jwpb-cart-contents-item">' . $part . '</div>';
+		}
+
+		$name .= '<div class="jwpb-cart-contents" style="margin-top:0.5em;font-weight:normal;color:#666;">'
+			. $rows
+			. '</div>';
 
 		return $name;
 	}
