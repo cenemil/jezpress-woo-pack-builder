@@ -7,7 +7,7 @@ Requires at least: 5.8
 Tested up to: 6.7
 Requires PHP: 7.4
 WC requires at least: 6.0
-Stable tag: 1.1.9
+Stable tag: 1.1.10
 License: Proprietary
 
 Build product packs (hampers, gift boxes, meal kits) with flexible pricing, subscription billing, and seasonal rotation.
@@ -36,6 +36,10 @@ JezPress Woo Pack Builder adds a "Pack" product type to WooCommerce. Staff build
 4. Create packs via Products → Add New → select product type "Pack"
 
 == Changelog ==
+
+= 1.1.10 =
+* Custom pack type: removed the minimum addon selection requirement — customers can now add a custom pack to cart with no addons selected, paying just the WooCommerce base price
+* Removed the now-unused "select at least one item" validation, error notice, and related frontend markup/styles
 
 = 1.1.9 =
 * Fixed pack contents rendering breaking Elementor layouts when a page displays a pack's contents more than once (e.g. auto-inject placement combined with a manually placed shortcode, or multiple pack products in a related/upsell loop)

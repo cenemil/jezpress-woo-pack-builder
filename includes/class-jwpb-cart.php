@@ -16,7 +16,6 @@ class JWPB_Cart {
 
 	public static function init() {
 		add_filter( 'woocommerce_add_cart_item_data',      array( __CLASS__, 'enrich_cart_item_data' ), 10, 2 );
-		add_filter( 'woocommerce_add_to_cart_validation',  array( __CLASS__, 'validate_custom_pack' ), 10, 2 );
 		add_action( 'woocommerce_before_calculate_totals', array( __CLASS__, 'set_pack_price' ), 10, 1 );
 		add_filter( 'woocommerce_cart_item_name',          array( __CLASS__, 'append_contents_summary' ), 10, 3 );
 		add_filter( 'woocommerce_add_to_cart_validation',  array( __CLASS__, 'apply_subscription_to_cart' ), 10, 2 );
@@ -53,37 +52,6 @@ class JWPB_Cart {
 		}
 
 		return $cart_item_data;
-	}
-
-	/**
-	 * Validate that a custom pack has at least one addon item selected.
-	 *
-	 * @param bool $passed     Whether validation passed so far.
-	 * @param int  $product_id Product being added.
-	 * @return bool
-	 */
-	public static function validate_custom_pack( $passed, $product_id ) {
-		if ( ! $passed ) {
-			return false;
-		}
-
-		$product = wc_get_product( $product_id );
-
-		if ( ! ( $product instanceof WC_Product_Pack ) || ! $product->is_custom() ) {
-			return $passed;
-		}
-
-		$selections = self::parse_addon_selections( $product );
-
-		if ( empty( $selections ) ) {
-			wc_add_notice(
-				__( 'Please select at least one item before adding this pack to your cart.', 'jezpress-woo-pack-builder' ),
-				'error'
-			);
-			return false;
-		}
-
-		return $passed;
 	}
 
 	/**

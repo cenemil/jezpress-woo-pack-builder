@@ -278,9 +278,6 @@ class JWPB_Shortcode {
 			'addonSumMode' => $is_sum_mode ? 1 : 0,
 			'basePrice'    => $base_price,
 			'currency'     => get_woocommerce_currency_symbol(),
-			'i18n'         => array(
-				'selectAtLeastOne' => __( 'Please select at least one item.', 'jezpress-woo-pack-builder' ),
-			),
 		) );
 
 		$html = '<div class="jwpb-addon-form" id="jwpb-addon-form">';
@@ -311,7 +308,7 @@ class JWPB_Shortcode {
 			);
 		}
 
-		$html .= '<div class="jwpb-addon-error" id="jwpb-addon-error" style="display:none;">' . esc_html__( 'Please select at least one item.', 'jezpress-woo-pack-builder' ) . '</div></div>';
+		$html .= '</div>';
 
 		return $html;
 	}

@@ -6,7 +6,6 @@
 	if (!$addonForm.length) { return; }
 
 	var $form          = $('form.cart');
-	var $error         = $('#jwpb-addon-error');
 	var $total         = $('#jwpb-addon-total');
 	var $totalRow      = $('#jwpb-addon-total-row');
 	var $summary       = $('#jwpb-addon-summary');
@@ -96,18 +95,10 @@
 	}
 
 	// -------------------------------------------------------------------------
-	// Form submit: validate, then sync addon inputs that live outside the cart
-	// form (any placement other than 'before_add_to_cart') into hidden fields.
+	// Form submit: sync addon inputs that live outside the cart form (any
+	// placement other than 'before_add_to_cart') into hidden fields.
 	// -------------------------------------------------------------------------
-	$form.on('submit', function (e) {
-		if (!hasSelection()) {
-			e.preventDefault();
-			$error.show();
-			$addonForm[0].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-			return false;
-		}
-		$error.hide();
-
+	$form.on('submit', function () {
 		// If the addon form is outside <form class="cart">, its inputs won't
 		// submit automatically — copy the current values as hidden fields.
 		var $outside = $addonForm.find('[name^="jwpb_addon_sel"]').not($form.find('[name^="jwpb_addon_sel"]'));
@@ -134,7 +125,6 @@
 	// Live feedback
 	// -------------------------------------------------------------------------
 	$addonForm.on('change input', '.jwpb-addon-checkbox, .jwpb-addon-qty', function () {
-		$error.hide();
 		updateSummary();
 		updateTotal();
 	});
