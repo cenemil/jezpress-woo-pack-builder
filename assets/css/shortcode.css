@@ -120,6 +120,12 @@
 	font-weight: normal;
 }
 
+.jwpb-addon-preorder-badge {
+	padding: 5px 10px;
+	font-size: 14px;
+	background: #eeeeee;
+}
+
 .jwpb-addon-label--qty .jwpb-addon-name {
 	flex: 0 0 auto;
 }

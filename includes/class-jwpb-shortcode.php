@@ -248,6 +248,7 @@ class JWPB_Shortcode {
 
 				$rows[] = array(
 					'field_key'  => $product_id . '_' . $variation_id,
+					'product_id' => $product_id,
 					'name'       => $parent->get_name(),
 					'var_label'  => $var_label,
 					'price_raw'  => (float) $display_product->get_price(),
@@ -316,7 +317,7 @@ class JWPB_Shortcode {
 	/**
 	 * Build the <label> HTML for a single addon row.
 	 *
-	 * @param array $row  Keys: field_key, name, var_label, price_raw, input_type.
+	 * @param array $row  Keys: field_key, product_id, name, var_label, price_raw, input_type.
 	 * @return string
 	 */
 	private static function addon_row_label( array $row ) {
@@ -324,7 +325,15 @@ class JWPB_Shortcode {
 		if ( $row['var_label'] ) {
 			$name_span .= ' <span class="jwpb-variation-label">' . esc_html( $row['var_label'] ) . '</span>';
 		}
-		$name_span .= ' <span class="jwpb-addon-price">(+' . wp_kses_post( wc_price( $row['price_raw'] ) ) . ')</span></span>';
+		$name_span .= ' <span class="jwpb-addon-price">(+' . wp_kses_post( wc_price( $row['price_raw'] ) ) . ')</span>';
+
+		// Soft dependency on jezpress-woo-pre-order — pre-order meta only ever
+		// lives on the parent product post, so check product_id, not a variation.
+		if ( class_exists( 'JWPO_Product' ) && JWPO_Product::is_preorder_active( $row['product_id'] ) ) {
+			$name_span .= ' <span class="jwpb-addon-preorder-badge">' . JWPO_Product::get_badge_html( $row['product_id'] ) . '</span>';
+		}
+
+		$name_span .= '</span>';
 
 		$input_name = 'jwpb_addon_sel[' . esc_attr( $row['field_key'] ) . ']';
 
