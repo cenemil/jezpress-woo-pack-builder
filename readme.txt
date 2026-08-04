@@ -7,7 +7,7 @@ Requires at least: 5.8
 Tested up to: 6.7
 Requires PHP: 7.4
 WC requires at least: 6.0
-Stable tag: 1.2.0
+Stable tag: 1.3.0
 License: Proprietary
 
 Build product packs (hampers, gift boxes, meal kits) with flexible pricing, subscription billing, and seasonal rotation.
@@ -36,6 +36,9 @@ JezPress Woo Pack Builder adds a "Pack" product type to WooCommerce. Staff build
 4. Create packs via Products → Add New → select product type "Pack"
 
 == Changelog ==
+
+= 1.3.0 =
+* Addon pre-order badge now matches the pre-order plugin's updated badge style — a small triangular arrow instead of a separate info icon, with the release-date availability tooltip on the badge itself.
 
 = 1.2.0 =
 * Custom pack addon options now show a "Pre-order" badge next to their price when the JezPress Woo Pre-Order plugin is active and that addon's product has pre-order enabled and active (soft dependency — no effect if the pre-order plugin isn't present).

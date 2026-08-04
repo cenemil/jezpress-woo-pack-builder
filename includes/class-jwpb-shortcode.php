@@ -330,7 +330,7 @@ class JWPB_Shortcode {
 		// Soft dependency on jezpress-woo-pre-order — pre-order meta only ever
 		// lives on the parent product post, so check product_id, not a variation.
 		if ( class_exists( 'JWPO_Product' ) && JWPO_Product::is_preorder_active( $row['product_id'] ) ) {
-			$name_span .= ' <span class="jwpb-addon-preorder-badge">' . JWPO_Product::get_badge_html( $row['product_id'] ) . '</span>';
+			$name_span .= ' ' . JWPO_Product::get_badge_html( $row['product_id'], 'jwpb-addon-preorder-badge' );
 		}
 
 		$name_span .= '</span>';
