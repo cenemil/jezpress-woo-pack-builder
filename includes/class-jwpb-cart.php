@@ -128,10 +128,11 @@ class JWPB_Cart {
 			}
 
 			if ( $product->is_custom() ) {
-				// Read price and weight from postmeta so the values are stable even if
-				// set_price()/set_weight() were already called this request (those only
-				// mutate the in-memory object; postmeta always reflects the saved state).
-				$total  = (float) get_post_meta( $product->get_id(), '_price', true );
+				// Base price via get_custom_base_price() (postmeta, filtered once for
+				// multi-currency) rather than get_price() / raw postmeta directly, so
+				// the value is stable even if set_price()/set_weight() were already
+				// called this request and is still converted exactly once.
+				$total  = $product->get_custom_base_price();
 				$weight = (float) get_post_meta( $product->get_id(), '_weight', true );
 				$items  = $cart_item['_jwpb_addon_selections'] ?? array();
 
@@ -145,6 +146,11 @@ class JWPB_Cart {
 					}
 				}
 
+				// Freeze the computed total: get_price() now returns it directly instead
+				// of running it back through WC's price filters, which would otherwise
+				// convert an already-converted total a second time under a multi-currency
+				// plugin (e.g. YITH Multi Currency Switcher).
+				$product->set_resolved_cart_price( $total );
 				$product->set_price( $total );
 				$product->set_weight( $weight );
 				continue;

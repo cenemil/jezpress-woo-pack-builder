@@ -33,6 +33,16 @@ class WC_Product_Pack extends WC_Product {
 		'pack_seasonal_last_rotated' => '',
 	);
 
+	/**
+	 * Final per-cart-item price for custom packs (base + selected addons), frozen
+	 * by JWPB_Cart::set_pack_price(). While set, get_price() returns it directly
+	 * instead of delegating to parent::get_price() — which would run WC's price
+	 * filters a second time and double-convert it under a multi-currency plugin.
+	 *
+	 * @var string|null
+	 */
+	protected $resolved_cart_price = null;
+
 	public function __construct( $product = 0 ) {
 		$this->supports[] = 'ajax_add_to_cart';
 		parent::__construct( $product );
@@ -48,6 +58,10 @@ class WC_Product_Pack extends WC_Product {
 	// -------------------------------------------------------------------------
 
 	public function get_price( $context = 'view' ) {
+		if ( null !== $this->resolved_cart_price ) {
+			return $this->resolved_cart_price;
+		}
+
 		if ( $this->is_custom() ) {
 			// WC General tab manages _price / _regular_price / _sale_price.
 			// Cart adds selected addon prices on top via JWPB_Cart::set_pack_price().
@@ -59,7 +73,37 @@ class WC_Product_Pack extends WC_Product {
 		}
 
 		$override = $this->get_pack_price_override( $context );
-		return '' !== $override ? $override : parent::get_price( $context );
+		if ( '' === $override ) {
+			return parent::get_price( $context );
+		}
+
+		// Run the override through the same WC price filter parent::get_price()
+		// would use (skipped here since we're not calling it) so multi-currency
+		// plugins still get a chance to convert it — otherwise a fixed override
+		// always displays in the store's base currency.
+		return 'view' === $context ? apply_filters( $this->get_hook_prefix() . 'price', $override, $this ) : $override;
+	}
+
+	/**
+	 * Base price for custom packs, filtered exactly once through WC's price
+	 * filters (so multi-currency plugins convert it), read from postmeta
+	 * directly so it's unaffected by any set_price() call already made on this
+	 * object earlier in the request.
+	 *
+	 * @return float
+	 */
+	public function get_custom_base_price() {
+		$price = get_post_meta( $this->get_id(), '_price', true );
+		return (float) apply_filters( $this->get_hook_prefix() . 'price', $price, $this );
+	}
+
+	/**
+	 * Freeze this cart item's fully-computed price. See $resolved_cart_price.
+	 *
+	 * @param string|float $price Final price for this cart item.
+	 */
+	public function set_resolved_cart_price( $price ) {
+		$this->resolved_cart_price = (string) $price;
 	}
 
 	public function is_purchasable() {
