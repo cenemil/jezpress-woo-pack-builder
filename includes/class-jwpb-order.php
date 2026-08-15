@@ -131,10 +131,7 @@ class JWPB_Order {
 			return $value;
 		}
 
-		$lines = array();
-		foreach ( $contents as $c ) {
-			$lines[] = self::format_content_line( $c, true );
-		}
+		$lines = self::build_content_lines( $contents, $item, true );
 
 		return '<ul style="margin:0;padding-left:1.2em;"><li>'
 			. implode( '</li><li>', $lines )
@@ -184,23 +181,61 @@ class JWPB_Order {
 		if ( $plain_text ) {
 			echo "\n" . esc_html( $label ) . ":\n";
 
-			foreach ( $contents as $c ) {
-				echo ' - ' . esc_html( self::format_content_line( $c, false ) ) . "\n";
+			foreach ( self::build_content_lines( $contents, $item, false ) as $line ) {
+				echo ' - ' . esc_html( $line ) . "\n";
 			}
 
 			return;
 		}
 
-		$lines = array();
-		foreach ( $contents as $c ) {
-			$lines[] = self::format_content_line( $c, true );
-		}
+		$lines = self::build_content_lines( $contents, $item, true );
 
 		echo '<ul class="wc-item-meta jwpb-pack-contents" style="margin:0.25em 0 0;padding-left:1.2em;font-size:0.9em;list-style:disc;">';
 		echo '<li style="margin:0;list-style:none;padding:0;"><strong>' . esc_html( $label ) . '</strong>';
 		echo '<ul style="margin:0;padding-left:1.2em;list-style:disc;"><li style="margin:0;">'
 			. implode( '</li><li style="margin:0;">', $lines ) // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in format_content_line().
 			. '</li></ul></li></ul>';
+	}
+
+	/**
+	 * Format every contents entry into a display line, giving other plugins a
+	 * chance to annotate each one.
+	 *
+	 * The `jwpb_order_item_content_line` filter is what JezPress Woo Pre-Order
+	 * hooks to append "(Pre-order)" to the individual pack items still awaiting
+	 * release — that state lives in its order item meta, not in _jwpb_contents,
+	 * so this plugin has no way to know it on its own. Both the admin and the
+	 * customer-facing renderer run entries through here, so an annotation
+	 * appears in every view rather than only some of them.
+	 *
+	 * @param array                 $contents Decoded _jwpb_contents entries.
+	 * @param WC_Order_Item_Product $item     Order item the contents belong to.
+	 * @param bool                  $html     True for HTML output, false for plain text.
+	 * @return string[] Lines, HTML-escaped when $html is true.
+	 */
+	private static function build_content_lines( $contents, $item, $html ) {
+		$lines = array();
+
+		foreach ( $contents as $c ) {
+			/**
+			 * Filter a single pack contents line.
+			 *
+			 * @since 1.3.3
+			 * @param string                $line Formatted line; escaped when $html is true.
+			 * @param array                 $c    The contents entry.
+			 * @param WC_Order_Item_Product $item Order item.
+			 * @param bool                  $html Whether $line is HTML or plain text.
+			 */
+			$lines[] = apply_filters(
+				'jwpb_order_item_content_line',
+				self::format_content_line( $c, $html ),
+				$c,
+				$item,
+				$html
+			);
+		}
+
+		return $lines;
 	}
 
 	/**

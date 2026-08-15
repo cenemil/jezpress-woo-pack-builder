@@ -106,8 +106,16 @@ Customer-facing output is `JWPB_Order::render_pack_contents()` on
 meta view, so the two paths never double-render. It receives `$plain_text` as its 4th arg and must
 keep emitting a text-only branch; HTML markup in a plain-text email is not acceptable.
 
-Both paths format lines through `format_content_line( $entry, $html )` — change line formatting
-there, not in one renderer, or admin and email disagree about the box contents.
+Both paths format lines through `build_content_lines()` → `format_content_line( $entry, $html )` —
+change line formatting there, not in one renderer, or admin and email disagree about the box
+contents.
+
+`build_content_lines()` applies the **`jwpb_order_item_content_line`** filter
+(`$line, $entry, $item, $html`) to every entry. That exists for JezPress Woo Pre-Order 1.6.1+,
+which appends "(Pre-order)" to the pack items still awaiting release — that state lives in *its*
+order item meta (`_jwpo_bundle_pending_items`), not in `_jwpb_contents`, so this plugin can't
+derive it. `$html` tells the hook whether to return escaped HTML or bare text, since the same
+filter feeds the plain-text email.
 
 Renaming the key to drop the underscore would be a simpler fix but would orphan every existing
 order's contents meta. Don't.

@@ -7,7 +7,7 @@ Requires at least: 5.8
 Tested up to: 6.7
 Requires PHP: 7.4
 WC requires at least: 6.0
-Stable tag: 1.3.2
+Stable tag: 1.3.3
 License: Proprietary
 
 Build product packs (hampers, gift boxes, meal kits) with flexible pricing, subscription billing, and seasonal rotation.
@@ -36,6 +36,9 @@ JezPress Woo Pack Builder adds a "Pack" product type to WooCommerce. Staff build
 4. Create packs via Products → Add New → select product type "Pack"
 
 == Changelog ==
+
+= 1.3.3 =
+* Added a `jwpb_order_item_content_line` filter so other plugins can annotate individual pack contents lines wherever they render (admin order screen, order emails, thank-you page, My Account). JezPress Woo Pre-Order 1.6.1+ uses it to mark which items in the box are still awaiting release
 
 = 1.3.2 =
 * Fixed pack contents never appearing in customer-facing order details — all order emails (including the JezPress Woo Pre-Order pre-order confirmation and release notice), the thank-you page and My Account → order details showed the pack line with no contents. The contents meta key is underscore-prefixed, and WooCommerce hides underscore-prefixed item meta everywhere except the admin order screen; contents are now rendered explicitly in those customer-facing views, in both HTML and plain-text emails
