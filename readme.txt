@@ -7,7 +7,7 @@ Requires at least: 5.8
 Tested up to: 6.7
 Requires PHP: 7.4
 WC requires at least: 6.0
-Stable tag: 1.3.1
+Stable tag: 1.3.2
 License: Proprietary
 
 Build product packs (hampers, gift boxes, meal kits) with flexible pricing, subscription billing, and seasonal rotation.
@@ -36,6 +36,9 @@ JezPress Woo Pack Builder adds a "Pack" product type to WooCommerce. Staff build
 4. Create packs via Products → Add New → select product type "Pack"
 
 == Changelog ==
+
+= 1.3.2 =
+* Fixed pack contents never appearing in customer-facing order details — all order emails (including the JezPress Woo Pre-Order pre-order confirmation and release notice), the thank-you page and My Account → order details showed the pack line with no contents. The contents meta key is underscore-prefixed, and WooCommerce hides underscore-prefixed item meta everywhere except the admin order screen; contents are now rendered explicitly in those customer-facing views, in both HTML and plain-text emails
 
 = 1.3.1 =
 * Fixed incorrect pricing under multi-currency plugins (e.g. YITH Multi Currency Switcher): a standard pack with a fixed price override never got currency-converted, and a custom pack's cart/checkout total mixed an unconverted base price with converted addon prices and could then be converted a second time when WooCommerce re-read the price

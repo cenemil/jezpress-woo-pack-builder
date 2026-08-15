@@ -27,7 +27,7 @@ Pure PHP plugin — no Composer, npm, or build scripts. No compilation required.
 | `includes/class-jwpb-product-type.php` | `JWPB_Product_Type` | Static; registers WC type, product data tabs, panel HTML, meta save, script enqueue |
 | `includes/class-jwpb-admin.php` | `JWPB_Admin` | Singleton; WC → Packs submenu, list table of all packs, settings tab |
 | `includes/class-jwpb-cart.php` | `JWPB_Cart` | Static; seasonal snapshot, sum-mode pricing, cart item name with contents |
-| `includes/class-jwpb-order.php` | `JWPB_Order` | Static; copies pack items into order item meta at checkout |
+| `includes/class-jwpb-order.php` | `JWPB_Order` | Static; copies pack items into order item meta at checkout, and renders them in both the admin order screen and customer-facing views (emails / thank-you / My Account) |
 | `includes/class-jwpb-seasonal.php` | `JWPB_Seasonal` | Static; queries seasonal product pool using configurable tag, rotates pack items |
 | `includes/class-jwpb-subscription.php` | `JWPB_Subscription_Bridge` | Static; detects and routes to JezPress WC Subscription or WC Subscriptions |
 | `includes/class-jwpb-ajax.php` | `JWPB_Ajax` | Static; rotate seasonal AJAX, pool count AJAX; also handles `jwpb_get_product_info` for the editor |
@@ -84,7 +84,33 @@ Both `save_pack_items()` and `save_addon_items()` are full replace (delete by `i
 
 | Key | Type |
 |---|---|
-| `_jwpb_contents` | JSON `[{"id":X,"name":"...","sku":"...","qty":Y},...]` |
+| `_jwpb_contents` | JSON `[{"product_id":X,"variation_id":X,"name":"...","sku":"...","quantity":Y,"variation":"..."},...]` |
+
+##### Displaying `_jwpb_contents` — two separate paths, don't collapse them
+
+The key is **underscore-prefixed**, and `WC_Order_Item::get_formatted_meta_data()` defaults to
+`$hideprefix = '_'`, so it is stripped from every rendering that goes through
+`wc_display_item_meta()`. The **only** caller that passes `''` is the admin order screen
+(`html-order-item-meta.php` → `get_all_formatted_meta_data( '' )`).
+
+That means the `woocommerce_order_item_display_meta_key` / `..._meta_value` filters
+(`JWPB_Order::format_meta_key()` / `format_meta_value()`) are **admin-only**. Until 1.3.2 they
+were the only renderer, so pack contents were invisible in every customer-facing view: all order
+emails (including JezPress Woo Pre-Order's pre-order confirmation and release notice, which just
+`do_action( 'woocommerce_email_order_details' )` like core), the thank-you page, and
+My Account → order details.
+
+Customer-facing output is `JWPB_Order::render_pack_contents()` on
+**`woocommerce_order_item_meta_end`**, which fires in `emails/email-order-items.php`,
+`emails/plain/email-order-items.php` and `order/order-details-item.php` — and *not* in the admin
+meta view, so the two paths never double-render. It receives `$plain_text` as its 4th arg and must
+keep emitting a text-only branch; HTML markup in a plain-text email is not acceptable.
+
+Both paths format lines through `format_content_line( $entry, $html )` — change line formatting
+there, not in one renderer, or admin and email disagree about the box contents.
+
+Renaming the key to drop the underscore would be a simpler fix but would orphan every existing
+order's contents meta. Don't.
 
 #### Custom pack cart item data
 
